@@ -18,7 +18,7 @@ require (
 
 require (
 	github.com/farshidtz/senml/v2 v2.0.0
-	github.com/rabbitmq/amqp091-go v1.8.1 // indirect
+	github.com/rabbitmq/amqp091-go v1.8.1
 )
 
 require (
