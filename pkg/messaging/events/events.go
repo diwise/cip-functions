@@ -39,15 +39,22 @@ func (m MessageReceived) FunctionID() string {
 	return m.ID_
 }
 
+func (m *MessageAccepted) FunctionType() string {
+	return m.Type
+}
+
 type EventDecoratorFunc func(m *MessageAccepted)
 type MessageAccepted struct {
-	Function  string `json:"functionID"`
+	ID        string `json:"functionID"`
+	Type      string `json:"type"`
+	Values    any    `json:"values"`
 	Timestamp string `json:"timestamp"`
 }
 
-func NewMessageAccepted(functionID string, decorators ...EventDecoratorFunc) *MessageAccepted {
+func NewMessageAccepted(functionID string, msg MessageReceived, decorators ...EventDecoratorFunc) *MessageAccepted {
 	m := &MessageAccepted{
-		Function:  functionID,
+		ID:        functionID,
+		Type:      msg.Type,
 		Timestamp: time.Now().UTC().Format(time.RFC3339Nano),
 	}
 
@@ -67,7 +74,7 @@ func (m *MessageAccepted) TopicName() string {
 }
 
 func (m *MessageAccepted) Error() error {
-	if m.Function == "" {
+	if m.ID == "" {
 		return errors.New("function id is missing")
 	}
 

@@ -32,5 +32,5 @@ func (m *messageProcessor) ProcessMessage(ctx context.Context, msg events.Messag
 		return nil, fmt.Errorf("could not find cip-function with functionID %s, %w", msg.FunctionID(), err)
 	}
 
-	return events.NewMessageAccepted(function.ID()), nil
+	return events.NewMessageAccepted(function.ID(), msg), nil
 }
