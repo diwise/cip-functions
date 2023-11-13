@@ -115,7 +115,7 @@ func newCommandHandler(messenger messaging.MsgContext, app application.App) mess
 			return err
 		}
 
-		logger = logger.With(slog.String("function_id", evt.Function()))
+		logger = logger.With(slog.String("function_id", evt.FunctionID()))
 		ctx = logging.NewContextWithLogger(ctx, logger)
 
 		messageAccepted, err := app.MessageReceived(ctx, evt)
@@ -160,7 +160,7 @@ func newTopicMessageHandler(messenger messaging.MsgContext, app application.App)
 			return
 		}
 
-		logger = logger.With(slog.String("function_id", evt.Sensor))
+		logger = logger.With(slog.String("function_id", evt.Function))
 		ctx = logging.NewContextWithLogger(ctx, logger)
 
 		err = app.MessageAccepted(ctx, evt, messenger)
