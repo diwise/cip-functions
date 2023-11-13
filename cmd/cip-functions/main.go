@@ -160,7 +160,7 @@ func newTopicMessageHandler(messenger messaging.MsgContext, app application.App)
 			return
 		}
 
-		logger = logger.With(slog.String("device_id", evt.Sensor))
+		logger = logger.With(slog.String("function_id", evt.Sensor))
 		ctx = logging.NewContextWithLogger(ctx, logger)
 
 		err = app.MessageAccepted(ctx, evt, messenger)
