@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/diwise/cip-functions/internal/pkg/application/functions"
 	"github.com/diwise/cip-functions/pkg/messaging/events"
 )
 
@@ -26,21 +27,10 @@ func (m *messageProcessor) ProcessMessage(ctx context.Context, msg events.Messag
 	}
 
 	//find function from functionID
-	/*
-			function, err := functions.FindFunctionFromFunctionID(ctx, msg.FunctionID())
-			if err != nil {
-				return nil, fmt.Errorf("could not find function with functionID %s, %w", msg.FunctionID(), err)
-			}
+	function, err := functions.FindCIPFunctionFromFunctionID(ctx, msg.FunctionID())
+	if err != nil {
+		return nil, fmt.Errorf("could not find cip-function with functionID %s, %w", msg.FunctionID(), err)
+	}
 
-
-		return events.NewMessageAccepted(device.ID(), msg.Pack.Clone(),
-			events.Lat(device.Latitude()),
-			events.Lon(device.Longitude()),
-			events.Environment(device.Environment()),
-			events.Source(device.Source()),
-			events.Tenant(device.Tenant())), nil
-
-	*/
-
-	return nil, nil
+	return events.NewMessageAccepted(function.ID()), nil
 }
