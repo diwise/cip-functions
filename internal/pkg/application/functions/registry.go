@@ -1,10 +1,13 @@
 package functions
 
 import (
+	"bufio"
 	"context"
 	"io"
+	"strings"
 
 	"github.com/diwise/cip-functions/internal/pkg/infrastructure/database"
+	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
 )
 
 type Registry interface {
@@ -13,9 +16,42 @@ type Registry interface {
 }
 
 func NewRegistry(ctx context.Context, input io.Reader, storage database.Storage) (Registry, error) {
-	return &reg{
+	r := &reg{
 		f: make(map[string]Function),
-	}, nil
+	}
+
+	//var err error
+
+	//numErrors := 0
+	numFunctions := 0
+
+	logger := logging.GetFromContext(ctx)
+
+	scanner := bufio.NewScanner(input)
+	for scanner.Scan() {
+		line := scanner.Text()
+
+		tokens := strings.Split(line, ";")
+		tokenCount := len(tokens)
+
+		if tokenCount >= 1 {
+			f := &fnct{
+				ID_:       tokens[0],
+				Type_:     tokens[1],
+				Function_: tokens[2],
+			}
+
+			storage.AddFnct(ctx, f.ID_, f.Type_, f.Function_)
+
+			r.f[tokens[0]] = f
+			numFunctions++
+		}
+
+	}
+
+	logger.Info("loaded functions from config file", "count", numFunctions)
+
+	return nil, nil
 }
 
 type reg struct {

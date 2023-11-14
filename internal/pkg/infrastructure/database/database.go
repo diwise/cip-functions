@@ -11,7 +11,7 @@ import (
 type Storage interface {
 	Initialize(context.Context) error
 	//Add(ctx context.Context, id, label string, value float64, timestamp time.Time) error
-	//AddFnct(ctx context.Context, id, fnType, subType, tenant, source string, lat, lon float64) error
+	AddFnct(ctx context.Context, id, fnType, cipfnctType string) error
 	//History(ctx context.Context, id, label string, lastN int) ([]LogValue, error)
 }
 
@@ -72,7 +72,8 @@ func (i *impl) createTables(ctx context.Context) error {
 			tenant 	  TEXT NOT NULL,
 			source 	  TEXT NULL,
 			latitude  NUMERIC(7, 5),
-			longitude NUMERIC(7, 5)
+			longitude NUMERIC(7, 5),
+			cip_function TEXT NOT NULL
 	  	);
 
 		CREATE TABLE IF NOT EXISTS fnct_history (
@@ -121,4 +122,12 @@ func (i *impl) createTables(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func (i *impl) AddFnct(ctx context.Context, id, fnType, cipfnType string) error {
+	_, err := i.db.Exec(ctx, `
+		INSERT INTO fnct(id,type,cip_function) VALUES ($1,$2,$3) ON CONFLICT (id) DO NOTHING;
+	`, id, fnType, cipfnType)
+
+	return err
 }
