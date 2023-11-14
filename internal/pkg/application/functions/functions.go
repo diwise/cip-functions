@@ -1,6 +1,7 @@
 package functions
 
 type Function interface {
+	ID() string
 	Handle()
 }
 

@@ -3,13 +3,16 @@ package database
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/diwise/service-chassis/pkg/infrastructure/env"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Storage interface {
-	Initialize(context.Context) error
+	Initialize(ctx context.Context) error
+	Snapshot(ctx context.Context, id string, snapshot []byte, timestamp time.Time) error
+	GetLatestSnapshot(ctx context.Context, id string) ([]byte, error)
 	//Add(ctx context.Context, id, label string, value float64, timestamp time.Time) error
 	//AddFnct(ctx context.Context, id, fnType, subType, tenant, source string, lat, lon float64) error
 	//History(ctx context.Context, id, label string, lastN int) ([]LogValue, error)
