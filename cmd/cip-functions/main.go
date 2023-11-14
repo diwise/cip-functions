@@ -108,17 +108,17 @@ func newCommandHandler(messenger messaging.MsgContext, app application.App) mess
 
 		_, ctx, logger = o11y.AddTraceIDToLoggerAndStoreInContext(span, logger, ctx)
 
-		evt := events.MessageReceived{}
+		evt := events.FunctionUpdated{}
 		err = json.Unmarshal(wrapper.Body(), &evt)
 		if err != nil {
 			logger.Error("failed to decode message from json", "err", err.Error())
 			return err
 		}
 
-		logger = logger.With(slog.String("function_id", evt.FunctionID()))
+		logger = logger.With(slog.String("function_id", evt.ID()))
 		ctx = logging.NewContextWithLogger(ctx, logger)
 
-		messageAccepted, err := app.MessageReceived(ctx, evt)
+		messageAccepted, err := app.FunctionUpdated(ctx, evt)
 		if err != nil {
 			logger.Error("message not accepted", "err", err.Error())
 			return err
