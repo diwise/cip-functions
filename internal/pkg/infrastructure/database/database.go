@@ -15,6 +15,7 @@ type Storage interface {
 	Select(ctx context.Context, id string) (any, error)
 	Create(ctx context.Context, id string, value any) error
 	Update(ctx context.Context, id string, value any) error
+	Remove(ctx context.Context, id string) error
 	Exists(ctx context.Context, id string) bool
 }
 
@@ -70,15 +71,6 @@ func (i *impl) Initialize(ctx context.Context) error {
 	return i.createTables(ctx)
 }
 
-func (i *impl) Exec(ctx context.Context, sql string, args ...any) error {
-	_, err := i.db.Exec(ctx, sql, args...)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func (i *impl) Create(ctx context.Context, id string, value any) error {
 	b, err := json.Marshal(value)
 	if err != nil {
@@ -86,6 +78,20 @@ func (i *impl) Create(ctx context.Context, id string, value any) error {
 	}
 
 	_, err = i.db.Exec(ctx, `insert into cip_fnct (id, data) values ($1, $2)`, id, string(b))
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (i *impl) Remove(ctx context.Context, id string) error {
+	_, err := i.db.Exec(ctx, `delete from cip_fnct where id = $1`, id)
+	if err != nil {
+		return err
+	}
+
+	_, err = i.db.Exec(ctx, `delete from cip_fnct_values where cip_fnct_id = $1`, id)
 	if err != nil {
 		return err
 	}

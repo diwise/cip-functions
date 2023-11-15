@@ -20,7 +20,6 @@ func TestInitialize(t *testing.T) {
 
 func TestCreate(t *testing.T) {
 	is, s, ctx, connected, err := testSetup(t)
-
 	if !connected {
 		t.Skip("not connected")
 	}

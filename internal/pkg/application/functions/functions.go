@@ -12,7 +12,7 @@ type Function interface {
 	Function() string
 	Type() string
 
-	Handle(context.Context, *events.MessageAccepted, messaging.MsgContext) error
+	Handle(context.Context, *events.FunctionUpdated, messaging.MsgContext) error
 }
 
 type location struct {
@@ -26,7 +26,7 @@ type fnct struct {
 	Function_ string `json:"function"`
 }
 
-func (f *fnct) Handle(context.Context, *events.MessageAccepted, messaging.MsgContext) error {
+func (f *fnct) Handle(context.Context, *events.FunctionUpdated, messaging.MsgContext) error {
 	return nil
 }
 

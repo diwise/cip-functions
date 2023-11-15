@@ -1,44 +1,58 @@
 package combinedsewageoverflow
 
 import (
+	"context"
 	"time"
 
+	"github.com/diwise/cip-functions/internal/pkg/application/functions"
 	"github.com/diwise/cip-functions/internal/pkg/infrastructure/database"
+	"github.com/diwise/cip-functions/pkg/messaging/events"
+	"github.com/diwise/messaging-golang/pkg/messaging"
 )
 
-type sewageOverflow struct {
-	id_     string
-	storage database.Storage
+type SewageOverflow struct {
+	ID_         string     `json:"id"`
+	Count       int        `json:"count"`
+	Duration    *time.Time `json:"duration,omitempty"`
+	Description string     `json:"description"`
+	EndTime     *time.Time `json:"endTime,omitempty"`
+	Location    Point      `json:"location"`
+	State       bool       `json:"state"`
+	StartTime   *time.Time `json:"startTime"`
+	Timestamp   time.Time  `json:"timestamp"`
+
+	storage    database.Storage     `json:"-"`
+	msgContext messaging.MsgContext `json:"-"`
 }
 
-func New(id string, s database.Storage) *sewageOverflow {
-	return &sewageOverflow{
-		id_:     id,
-		storage: s,
+type Point struct {
+	Lat float64 `json:"lat"`
+	Lon float64 `json:"lon"`
+}
+
+// Function implements functions.Function.
+func (s *SewageOverflow) Function() string {
+	panic("unimplemented")
+}
+
+// ID implements functions.Function.
+func (s *SewageOverflow) ID() string {
+	return s.ID_
+}
+
+// Type implements functions.Function.
+func (s *SewageOverflow) Type() string {
+	panic("unimplemented")
+}
+
+func New(s database.Storage, m messaging.MsgContext) functions.Function {
+	return &SewageOverflow{
+		storage:    s,
+		msgContext: m,
 	}
 }
 
-type sewageOverflowObserved struct {
-	ID          string
-	Count       int
-	Duration    *time.Time
-	Description string
-	EndTime     *time.Time
-	Location    location
-	State       bool
-	StartTime   time.Time
-	Timestamp   time.Time
-}
-
-type location struct {
-	lat float64
-	lon float64
-}
-
-func (s *sewageOverflow) ID() string {
-	return s.id_
-}
-
-func (s *sewageOverflow) Handle() {
-
+// Handle implements functions.Function.
+func (s *SewageOverflow) Handle(ctx context.Context, msg *events.FunctionUpdated, m messaging.MsgContext) error {
+	panic("unimplemented")
 }
