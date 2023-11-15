@@ -7,27 +7,27 @@ import (
 )
 
 type sewageOverflow struct {
-	id_ string
+	id_     string
 	storage database.Storage
 }
 
 func New(id string, s database.Storage) *sewageOverflow {
 	return &sewageOverflow{
-		id_: id,
+		id_:     id,
 		storage: s,
 	}
 }
 
 type sewageOverflowObserved struct {
-	ID             string
-	Count          int
-	CumulativeTime *time.Time
-	Description    string
-	EndTime        *time.Time
-	Location       location
-	State          bool
-	StartTime      time.Time
-	Timestamp      time.Time
+	ID          string
+	Count       int
+	Duration    *time.Time
+	Description string
+	EndTime     *time.Time
+	Location    location
+	State       bool
+	StartTime   time.Time
+	Timestamp   time.Time
 }
 
 type location struct {
@@ -40,5 +40,5 @@ func (s *sewageOverflow) ID() string {
 }
 
 func (s *sewageOverflow) Handle() {
-	
+
 }

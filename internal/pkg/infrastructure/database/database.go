@@ -2,8 +2,8 @@ package database
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
-	"time"
 
 	"github.com/diwise/service-chassis/pkg/infrastructure/env"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -11,8 +11,11 @@ import (
 
 type Storage interface {
 	Initialize(ctx context.Context) error
-	Snapshot(ctx context.Context, id string, snapshot []byte, timestamp time.Time) error
-	GetLatestSnapshot(ctx context.Context, id string) ([]byte, error)
+	Close()
+	Select(ctx context.Context, id string) (any, error)
+	Create(ctx context.Context, id string, value any) error
+	Update(ctx context.Context, id string, value any) error
+	Exists(ctx context.Context, id string) bool
 	//Add(ctx context.Context, id, label string, value float64, timestamp time.Time) error
 	//AddFnct(ctx context.Context, id, fnType, subType, tenant, source string, lat, lon float64) error
 	//History(ctx context.Context, id, label string, lastN int) ([]LogValue, error)
@@ -62,32 +65,125 @@ func Connect(ctx context.Context, cfg Config) (Storage, error) {
 	}, nil
 }
 
+func (i *impl) Close() {
+	i.db.Close()
+}
+
 func (i *impl) Initialize(ctx context.Context) error {
 	return i.createTables(ctx)
 }
 
+func (i *impl) Exec(ctx context.Context, sql string, args ...any) error {
+	_, err := i.db.Exec(ctx, sql, args...)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (i *impl) Create(ctx context.Context, id string, value any) error {
+	b, err := json.Marshal(value)
+	if err != nil {
+		return err
+	}
+
+	_, err = i.db.Exec(ctx, `insert into cip_fnct (id, data) values ($1, $2)`, id, string(b))
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (i *impl) Update(ctx context.Context, id string, value any) error {
+	b, err := json.Marshal(value)
+	if err != nil {
+		return err
+	}
+
+	_, err = i.db.Exec(ctx, `update cip_fnct set data = $2 where id = $1`, id, string(b))
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (i *impl) Select(ctx context.Context, id string) (any, error) {
+	row := i.db.QueryRow(ctx, `select data from cip_fnct where id = $1`, id)
+
+	var obj any
+	err := row.Scan(&obj)
+	if err != nil {
+		return nil, err
+	}
+
+	return obj, nil
+}
+
+func Get[T any](ctx context.Context, storage Storage, id string) (T, error) {
+	t1, err := storage.Select(ctx, id)
+	if err != nil {
+		return *new(T), err
+	}
+
+	b, err := json.Marshal(t1)
+	if err != nil {
+		return *new(T), err
+	}
+
+	t := *new(T)
+
+	err = json.Unmarshal(b, &t)
+	if err != nil {
+		return *new(T), err
+	}
+
+	return t, nil
+}
+
+func CreateOrUpdate[T any](ctx context.Context, storage Storage, id string, value T) error {
+	var err error
+
+	if storage.Exists(ctx, id) {
+		err = storage.Update(ctx, id, value)
+	} else {
+		err = storage.Create(ctx, id, value)
+	}
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (i *impl) Exists(ctx context.Context, id string) bool {
+	var n int32
+	err := i.db.QueryRow(ctx, `select count(*) from cip_fnct where id = $1`, id).Scan(&n)
+	if err != nil {
+		return false
+	}
+
+	return n > 0
+}
+
 func (i *impl) createTables(ctx context.Context) error {
 	ddl := `
-		CREATE TABLE IF NOT EXISTS fnct (
+		CREATE TABLE IF NOT EXISTS cip_fnct (
 			id 		  TEXT PRIMARY KEY NOT NULL,
-			type 	  TEXT NOT NULL,
-			sub_type  TEXT NOT NULL,
-			tenant 	  TEXT NOT NULL,
-			source 	  TEXT NULL,
-			latitude  NUMERIC(7, 5),
-			longitude NUMERIC(7, 5)
+			data      JSONB NOT NULL
 	  	);
-
-		CREATE TABLE IF NOT EXISTS fnct_history (
-			row_id 	bigserial,
-			time 	TIMESTAMPTZ NOT NULL,
-			fnct_id TEXT NOT NULL,
-			label 	TEXT NOT NULL,
-			value 	DOUBLE PRECISION NOT NULL,
-			FOREIGN KEY (fnct_id) REFERENCES fnct (id)
-	  	);
-
-		CREATE INDEX IF NOT EXISTS fnct_history_fnct_id_label_idx ON fnct_history (fnct_id, label);`
+		
+		CREATE TABLE IF NOT EXISTS cip_fnct_values (
+			time 			TIMESTAMPTZ NOT NULL,
+			cip_fnct_id 	TEXT NOT NULL,
+			name			TEXT NOT NULL,
+			value			NUMERIC NULL,
+			value_string 	TEXT NULL,
+			value_bool 		BOOLEAN NULL
+		);`
 
 	tx, err := i.db.Begin(ctx)
 	if err != nil {
@@ -104,14 +200,14 @@ func (i *impl) createTables(ctx context.Context) error {
 	err = tx.QueryRow(ctx, `
 		SELECT COUNT(*) n
 		FROM timescaledb_information.hypertables
-		WHERE hypertable_name = 'fnct_history';`).Scan(&n)
+		WHERE hypertable_name = 'cip_fnct_values';`).Scan(&n)
 	if err != nil {
 		tx.Rollback(ctx)
 		return err
 	}
 
 	if n == 0 {
-		_, err := tx.Exec(ctx, `SELECT create_hypertable('fnct_history', 'time');`)
+		_, err := tx.Exec(ctx, `SELECT create_hypertable('cip_fnct_values', 'time');`)
 		if err != nil {
 			tx.Rollback(ctx)
 			return err
