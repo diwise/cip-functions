@@ -51,7 +51,7 @@ func NewRegistry(ctx context.Context, input io.Reader, storage database.Storage)
 
 	logger.Info("loaded functions from config file", "count", numFunctions)
 
-	return nil, nil
+	return r, nil
 }
 
 type reg struct {
