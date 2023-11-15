@@ -35,6 +35,8 @@ func NewRegistry(ctx context.Context, input io.Reader, storage database.Storage)
 		tokens := strings.Split(line, ";")
 		tokenCount := len(tokens)
 
+		//TODO: parse file and add function mappings to registry
+
 		if tokenCount >= 1 {
 
 			numFunctions++
