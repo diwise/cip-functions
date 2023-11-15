@@ -17,7 +17,6 @@ require (
 )
 
 require (
-	github.com/farshidtz/senml/v2 v2.0.0
 	github.com/matryer/is v1.4.1
 	github.com/rabbitmq/amqp091-go v1.8.1
 )
@@ -26,7 +25,6 @@ require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
-	github.com/diwise/iot-core v0.0.0-20231017061430-701c529d5da5
 	github.com/go-chi/chi/v5 v5.0.10 // indirect
 	github.com/go-logr/logr v1.2.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect

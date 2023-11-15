@@ -9,8 +9,7 @@ import (
 	"os"
 
 	"github.com/diwise/cip-functions/internal/pkg/application"
-	"github.com/diwise/cip-functions/internal/pkg/application/functions"
-	"github.com/diwise/cip-functions/internal/pkg/application/messageprocessor"
+	"github.com/diwise/cip-functions/internal/pkg/application/registry"
 	"github.com/diwise/cip-functions/internal/pkg/infrastructure/database"
 	"github.com/diwise/cip-functions/pkg/messaging/events"
 	"github.com/diwise/messaging-golang/pkg/messaging"
@@ -81,62 +80,17 @@ func createDatabaseConnectionOrDie(ctx context.Context) database.Storage {
 }
 
 func initialize(ctx context.Context, msgctx messaging.MsgContext, fconfig io.Reader, storage database.Storage) (application.App, error) {
-	msgproc := messageprocessor.NewMessageProcessor()
-
-	functionsRegistry, err := functions.NewRegistry(ctx, fconfig, storage)
+	fnRegistry, err := registry.NewRegistry(ctx, fconfig, storage)
 	if err != nil {
 		return nil, err
 	}
 
-	app := application.New(msgproc, functionsRegistry)
+	app := application.New(fnRegistry)
 
-	needToDecideThis := "application/json"
-	msgctx.RegisterCommandHandler(needToDecideThis, newCommandHandler(msgctx, app))
-
-	routingKey := "message.accepted"
+	routingKey := "function.updated"
 	msgctx.RegisterTopicMessageHandler(routingKey, newTopicMessageHandler(msgctx, app))
 
 	return app, nil
-}
-
-func newCommandHandler(messenger messaging.MsgContext, app application.App) messaging.CommandHandler {
-	return func(ctx context.Context, wrapper messaging.CommandMessageWrapper, logger *slog.Logger) error {
-		var err error
-
-		ctx, span := tracer.Start(ctx, "receive-command")
-		defer func() { tracing.RecordAnyErrorAndEndSpan(err, span) }()
-
-		_, ctx, logger = o11y.AddTraceIDToLoggerAndStoreInContext(span, logger, ctx)
-
-		evt := events.FunctionUpdated{}
-		err = json.Unmarshal(wrapper.Body(), &evt)
-		if err != nil {
-			logger.Error("failed to decode message from json", "err", err.Error())
-			return err
-		}
-
-		logger = logger.With(slog.String("function_id", evt.ID()))
-		ctx = logging.NewContextWithLogger(ctx, logger)
-
-		err = app.FunctionUpdated(ctx, evt)
-		if err != nil {
-			logger.Error("message not accepted", "err", err.Error())
-			return err
-		}
-
-		/*
-			this is commented out for now. We will still be sending all messages over the same topic, but messages can look different.
-			leaving this out until we know what we want to do
-
-			logger.Info("publishing message", "topic", messageAccepted.TopicName())
-			err = messenger.PublishOnTopic(ctx, messageAccepted)
-			if err != nil {
-				logger.Error("failed to publish message", "err", err.Error())
-				return err
-			}*/
-
-		return nil
-	}
 }
 
 func newTopicMessageHandler(messenger messaging.MsgContext, app application.App) messaging.TopicMessageHandler {
@@ -158,7 +112,7 @@ func newTopicMessageHandler(messenger messaging.MsgContext, app application.App)
 			return
 		}
 
-		logger = logger.With(slog.String("function_id", evt.ID()))
+		logger = logger.With(slog.String("function_id", evt.ID))
 		ctx = logging.NewContextWithLogger(ctx, logger)
 
 		err = app.FunctionUpdated(ctx, evt)

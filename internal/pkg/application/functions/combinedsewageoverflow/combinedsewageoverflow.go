@@ -8,6 +8,7 @@ import (
 	"github.com/diwise/cip-functions/internal/pkg/application/functions"
 	"github.com/diwise/cip-functions/internal/pkg/infrastructure/database"
 	"github.com/diwise/cip-functions/pkg/messaging/events"
+	"github.com/diwise/cip-functions/pkg/messaging/topics"
 	"github.com/diwise/messaging-golang/pkg/messaging"
 )
 
@@ -35,17 +36,6 @@ type Point struct {
 	Lon float64 `json:"lon"`
 }
 
-func (s *SewageOverflow) Function() string {
-	panic("unimplemented")
-}
-
-func (s *SewageOverflow) ID() string {
-	return s.ID_
-}
-
-func (s *SewageOverflow) Type() string {
-	panic("unimplemented")
-}
 
 func New(s database.Storage, m messaging.MsgContext) functions.Function {
 	return &SewageOverflow{
@@ -54,8 +44,8 @@ func New(s database.Storage, m messaging.MsgContext) functions.Function {
 	}
 }
 
-func (s *SewageOverflow) Handle(ctx context.Context, msg *events.FunctionUpdated, m messaging.MsgContext) error {
-	id := fmt.Sprintf("SewageOverflowObserved:%s", msg.ID()) // TODO: better ID generation
+func (s *SewageOverflow) Handle(ctx context.Context, msg *events.FunctionUpdated) error {
+	id := fmt.Sprintf("SewageOverflowObserved:%s", msg.ID) // TODO: better ID generation
 
 	exists := s.storage.Exists(ctx, id)
 	if !exists {
@@ -65,6 +55,7 @@ func (s *SewageOverflow) Handle(ctx context.Context, msg *events.FunctionUpdated
 		})
 	}
 
+	// TODO: publish events to message broker
 	return nil
 }
 
@@ -74,7 +65,7 @@ type SewageOverflowObservedStarted struct {
 }
 
 func (s SewageOverflowObservedStarted) TopicName() string {
-	return "cip-functions.updated"
+	return topics.CipFunctionsUpdated
 }
 
 func (s SewageOverflowObservedStarted) ContentType() string {

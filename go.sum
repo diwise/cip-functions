@@ -7,17 +7,10 @@ github.com/cespare/xxhash/v2 v2.2.0/go.mod h1:VGX0DQ3Q6kWi7AoAeZDth3/j3BFtOZR5XL
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
-github.com/diwise/iot-core v0.0.0-20231017061430-701c529d5da5 h1:+qxT48VQ0BrDqWzoScWciQTDAHg7R4yKyPt/K6yr2zA=
-github.com/diwise/iot-core v0.0.0-20231017061430-701c529d5da5/go.mod h1:Cr7bQskE29XJ2VaChn2LIYpiNGroFxguIU8FpCdqwoY=
 github.com/diwise/messaging-golang v0.0.0-20231004082357-60ba8013c5b8 h1:/Tkp4ZB38E740YzIqVUYyD7JtTGJcbCoDl34Z7R5+ew=
 github.com/diwise/messaging-golang v0.0.0-20231004082357-60ba8013c5b8/go.mod h1:VUmBPfDlJHQbpgjjbjT60NRFd8h/jg2y9hn5WFNy/Ys=
 github.com/diwise/service-chassis v0.0.0-20231017061241-59264ee1dfc6 h1:jc8WK9nAG3gRmh+6kDC8mUEHPyMLM28KveN/RpuZC5g=
 github.com/diwise/service-chassis v0.0.0-20231017061241-59264ee1dfc6/go.mod h1:k1SgHx0ataBJDI9CbP9RbtIatRidBLQj8wh+o3vZC/k=
-github.com/farshidtz/senml/v2 v2.0.0 h1:Hk5dyfya2E1KToAzf9NH9jQazvKIbRc14acv/onQ3RE=
-github.com/farshidtz/senml/v2 v2.0.0/go.mod h1:MMhV93NbrFzyU1agBEoHRmhrhV/0nxbkMG0wMjyen8E=
-github.com/fxamacker/cbor/v2 v2.2.0/go.mod h1:TA1xS00nchWmaBnEIxPSE5oHLuJBAVvqrtAnWBwBCVo=
-github.com/fxamacker/cbor/v2 v2.4.0 h1:ri0ArlOR+5XunOP8CRUowT0pSJOwhW098ZCUyskZD88=
-github.com/fxamacker/cbor/v2 v2.4.0/go.mod h1:TA1xS00nchWmaBnEIxPSE5oHLuJBAVvqrtAnWBwBCVo=
 github.com/go-chi/chi/v5 v5.0.10 h1:rLz5avzKpjqxrYwXNfmjkrYYXOyLJd37pz53UFHC6vk=
 github.com/go-chi/chi/v5 v5.0.10/go.mod h1:DslCQbL2OYiznFReuXYUmQ2hGd1aDpCnlMNITLSKoi8=
 github.com/go-logr/logr v1.2.2/go.mod h1:jdQByPbusPIv2/zmleS9BjJVeZ6kBagPoEUsqbVz/1A=
@@ -71,8 +64,6 @@ github.com/stretchr/testify v1.7.1/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/
 github.com/stretchr/testify v1.8.0/go.mod h1:yNjHg4UonilssWZ8iaSj1OCr/vHnekPRkoO+kdMU+MU=
 github.com/stretchr/testify v1.8.4 h1:CcVxjf3Q8PM0mHUKJCdn+eZZtm5yQwehR5yeSVQQcUk=
 github.com/stretchr/testify v1.8.4/go.mod h1:sz/lmYIOXD/1dqDmKjjqLyZ2RngseejIcXlSw2iwfAo=
-github.com/x448/float16 v0.8.4 h1:qLwI1I70+NjRFUR3zs1JPUCgaCXSh3SW62uAKT1mSBM=
-github.com/x448/float16 v0.8.4/go.mod h1:14CWIYCyZA/cWjXOioeEpHeN/83MdbZDRQHoFcYsOfg=
 go.opentelemetry.io/otel v1.19.0 h1:MuS/TNf4/j4IXsZuJegVzI1cwut7Qc00344rgH7p8bs=
 go.opentelemetry.io/otel v1.19.0/go.mod h1:i0QyjOq3UPoTzff0PJB2N66fb4S0+rSbSB15/oyH9fY=
 go.opentelemetry.io/otel/exporters/otlp/otlpmetric v0.42.0 h1:ZtfnDL+tUrs1F0Pzfwbg2d59Gru9NCH3bgSHBM6LDwU=

@@ -2,35 +2,30 @@ package application
 
 import (
 	"context"
-	"fmt"
 
-	"github.com/diwise/cip-functions/internal/pkg/application/functions"
-	"github.com/diwise/cip-functions/internal/pkg/application/messageprocessor"
+	"github.com/diwise/cip-functions/internal/pkg/application/registry"
 	"github.com/diwise/cip-functions/pkg/messaging/events"
 )
-
+//go:generate moq -rm -out app_mock.go . App
 type App interface {
 	FunctionUpdated(ctx context.Context, msg events.FunctionUpdated) error
 }
 
 type app struct {
-	msgproc_   messageprocessor.MessageProcessor
-	functions_ functions.Registry
+	fnRegistry registry.Registry
 }
 
-func New(msgproc messageprocessor.MessageProcessor, functionRegistry functions.Registry) App {
+func New(functionRegistry registry.Registry) App {
 	return &app{
-		msgproc_:   msgproc,
-		functions_: functionRegistry,
+		fnRegistry: functionRegistry,
 	}
 }
 
 func (a *app) FunctionUpdated(ctx context.Context, msg events.FunctionUpdated) error {
-	err := a.msgproc_.ProcessFunctionUpdated(ctx, msg)
-	if err != nil {
-		return fmt.Errorf("failed to process message: %w", err)
-	}
 
-	// should return something other than error. Message?
+	//TODO: get function from registry and call Handle on it
+
+	a.fnRegistry.Find(ctx, registry.FindByID(msg.ID))
+
 	return nil
 }

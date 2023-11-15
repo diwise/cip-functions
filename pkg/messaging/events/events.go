@@ -1,16 +1,13 @@
 package events
 
-type location struct {
-	Latitude  float64 `json:"latitude"`
-	Longitude float64 `json:"longitude"`
-}
+
 
 type FunctionUpdated struct {
-	ID_      string    `json:"id"`
-	Name_    string    `json:"name"`
+	ID       string    `json:"id"`
+	Name     string    `json:"name"`
 	Type     string    `json:"type"`
 	SubType  string    `json:"subtype"`
-	Location *location `json:"location,omitempty"`
+	Location *Location `json:"location,omitempty"`
 	Tenant   string    `json:"tenant,omitempty"`
 	Source   string    `json:"source,omitempty"`
 
@@ -24,6 +21,7 @@ type FunctionUpdated struct {
 	Stopwatch Stopwatch `json:"Stopwatch,omitempty"` */
 }
 
-func (m *FunctionUpdated) ID() string {
-	return m.ID_
+type Location struct {
+	Latitude  float64 `json:"latitude"`
+	Longitude float64 `json:"longitude"`
 }
