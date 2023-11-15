@@ -15,19 +15,19 @@ var _ MessageProcessor = &MessageProcessorMock{}
 
 // MessageProcessorMock is a mock implementation of MessageProcessor.
 //
-// 	func TestSomethingThatUsesMessageProcessor(t *testing.T) {
+//	func TestSomethingThatUsesMessageProcessor(t *testing.T) {
 //
-// 		// make and configure a mocked MessageProcessor
-// 		mockedMessageProcessor := &MessageProcessorMock{
-// 			ProcessFunctionUpdatedFunc: func(ctx context.Context, msg events.FunctionUpdated) (*events.MessageAccepted, error) {
-// 				panic("mock out the ProcessFunctionUpdated method")
-// 			},
-// 		}
+//		// make and configure a mocked MessageProcessor
+//		mockedMessageProcessor := &MessageProcessorMock{
+//			ProcessFunctionUpdatedFunc: func(ctx context.Context, msg events.FunctionUpdated) (*events.MessageAccepted, error) {
+//				panic("mock out the ProcessFunctionUpdated method")
+//			},
+//		}
 //
-// 		// use mockedMessageProcessor in code that requires MessageProcessor
-// 		// and then make assertions.
+//		// use mockedMessageProcessor in code that requires MessageProcessor
+//		// and then make assertions.
 //
-// 	}
+//	}
 type MessageProcessorMock struct {
 	// ProcessFunctionUpdatedFunc mocks the ProcessFunctionUpdated method.
 	ProcessFunctionUpdatedFunc func(ctx context.Context, msg events.FunctionUpdated) (*events.MessageAccepted, error)
@@ -65,7 +65,8 @@ func (mock *MessageProcessorMock) ProcessFunctionUpdated(ctx context.Context, ms
 
 // ProcessFunctionUpdatedCalls gets all the calls that were made to ProcessFunctionUpdated.
 // Check the length with:
-//     len(mockedMessageProcessor.ProcessFunctionUpdatedCalls())
+//
+//	len(mockedMessageProcessor.ProcessFunctionUpdatedCalls())
 func (mock *MessageProcessorMock) ProcessFunctionUpdatedCalls() []struct {
 	Ctx context.Context
 	Msg events.FunctionUpdated

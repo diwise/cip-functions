@@ -10,13 +10,20 @@ import (
 )
 
 func TestInitialize(t *testing.T) {
-	is, s, _, err := testSetup(t)
+	is, s, _, connected, err := testSetup(t)
+	if !connected {
+		t.Skip("not connected")
+	}
 	is.NoErr(err)
 	s.Close()
 }
 
 func TestCreate(t *testing.T) {
-	is, s, ctx, err := testSetup(t)
+	is, s, ctx, connected, err := testSetup(t)
+
+	if !connected {
+		t.Skip("not connected")
+	}
 	is.NoErr(err)
 	defer s.Close()
 
@@ -29,7 +36,10 @@ func TestCreate(t *testing.T) {
 }
 
 func TestSelect(t *testing.T) {
-	is, s, ctx, err := testSetup(t)
+	is, s, ctx, connected, err := testSetup(t)
+	if !connected {
+		t.Skip("not connected")
+	}
 	is.NoErr(err)
 	defer s.Close()
 
@@ -53,7 +63,10 @@ type testStruct struct {
 }
 
 func TestGet(t *testing.T) {
-	is, s, ctx, err := testSetup(t)
+	is, s, ctx, connected, err := testSetup(t)
+	if !connected {
+		t.Skip("not connected")
+	}
 	is.NoErr(err)
 	defer s.Close()
 
@@ -70,7 +83,10 @@ func TestGet(t *testing.T) {
 }
 
 func TestCreateOrUpdate(t *testing.T) {
-	is, s, ctx, err := testSetup(t)
+	is, s, ctx, connected, err := testSetup(t)
+	if !connected {
+		t.Skip("not connected")
+	}
 	is.NoErr(err)
 	defer s.Close()
 
@@ -96,7 +112,7 @@ func TestCreateOrUpdate(t *testing.T) {
 
 }
 
-func testSetup(t *testing.T) (*is.I, Storage, context.Context, error) {
+func testSetup(t *testing.T) (*is.I, Storage, context.Context, bool, error) {
 	is := is.New(t)
 	ctx := context.Background()
 	s, err := Connect(ctx, Config{
@@ -108,9 +124,9 @@ func testSetup(t *testing.T) (*is.I, Storage, context.Context, error) {
 		sslmode:  "disable",
 	})
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, false, err
 	}
 
 	err = s.Initialize(ctx)
-	return is, s, ctx, err
+	return is, s, ctx, true, err
 }
