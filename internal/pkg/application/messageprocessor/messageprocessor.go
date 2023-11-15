@@ -11,7 +11,7 @@ import (
 //go:generate moq -rm -out messageprocessor_mock.go . MessageProcessor
 
 type MessageProcessor interface {
-	ProcessFunctionUpdated(ctx context.Context, msg events.FunctionUpdated) (*events.MessageAccepted, error)
+	ProcessFunctionUpdated(ctx context.Context, msg events.FunctionUpdated) error
 }
 
 type messageProcessor struct {
@@ -21,16 +21,17 @@ func NewMessageProcessor() MessageProcessor {
 	return &messageProcessor{}
 }
 
-func (m *messageProcessor) ProcessFunctionUpdated(ctx context.Context, msg events.FunctionUpdated) (*events.MessageAccepted, error) {
+func (m *messageProcessor) ProcessFunctionUpdated(ctx context.Context, msg events.FunctionUpdated) error {
 	if msg.ID() == "" {
-		return nil, fmt.Errorf("message contains no FunctionID")
+		return fmt.Errorf("message contains no FunctionID")
 	}
 
-	//find function from functionID
-	function, err := functions.FindCIPFunctionFromFunctionID(ctx, msg.ID())
+	//find function from functionID, return and create message? Handle? Handle should probably already have happened at this point.
+	_, err := functions.FindCIPFunctionFromFunctionID(ctx, msg.ID())
 	if err != nil {
-		return nil, fmt.Errorf("could not find cip-function with functionID %s, %w", msg.ID(), err)
+		return fmt.Errorf("could not find cip-function with functionID %s, %w", msg.ID(), err)
 	}
 
-	return events.NewMessageAccepted(function.ID(), msg), nil
+	//this function should return outgoing message, but setting it to error only until we know what that message looks like
+	return nil
 }

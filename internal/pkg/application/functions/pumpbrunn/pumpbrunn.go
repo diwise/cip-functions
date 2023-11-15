@@ -3,21 +3,33 @@ package pumpbrunn
 const FunctionTypeName string = "pumpbrunnar"
 
 type Pumpbrunn interface {
+	ID() string
+	Handle() error
 	State() bool
 }
 
 type pb struct {
-	State_ bool `json:"state"`
+	id_    string `json:"id"`
+	state_ bool   `json:"state"`
 }
 
-func New() Pumpbrunn {
+func New(id string) Pumpbrunn {
 	p := &pb{
-		State_: false,
+		id_:    id,
+		state_: false,
 	}
 
 	return p
 }
 
+func (pb *pb) ID() string {
+	return pb.id_
+}
+
 func (pb *pb) State() bool {
-	return pb.State_
+	return pb.state_
+}
+
+func (pb *pb) Handle() error {
+	return nil
 }

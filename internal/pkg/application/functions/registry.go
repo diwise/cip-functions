@@ -6,6 +6,7 @@ import (
 	"io"
 	"strings"
 
+	"github.com/diwise/cip-functions/internal/pkg/application/functions/pumpbrunn"
 	"github.com/diwise/cip-functions/internal/pkg/infrastructure/database"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
 )
@@ -41,6 +42,10 @@ func NewRegistry(ctx context.Context, input io.Reader, storage database.Storage)
 				Function_: tokens[2],
 			}
 
+			if f.Type_ == pumpbrunn.FunctionTypeName {
+				//something happens
+			}
+
 			database.CreateOrUpdate[fnct](ctx, storage, f.ID_, *f)
 
 			r.f[tokens[0]] = f
@@ -51,7 +56,7 @@ func NewRegistry(ctx context.Context, input io.Reader, storage database.Storage)
 
 	logger.Info("loaded functions from config file", "count", numFunctions)
 
-	return nil, nil
+	return r, nil
 }
 
 type reg struct {

@@ -118,18 +118,22 @@ func newCommandHandler(messenger messaging.MsgContext, app application.App) mess
 		logger = logger.With(slog.String("function_id", evt.ID()))
 		ctx = logging.NewContextWithLogger(ctx, logger)
 
-		messageAccepted, err := app.FunctionUpdated(ctx, evt)
+		err = app.FunctionUpdated(ctx, evt)
 		if err != nil {
 			logger.Error("message not accepted", "err", err.Error())
 			return err
 		}
 
-		logger.Info("publishing message", "topic", messageAccepted.TopicName())
-		err = messenger.PublishOnTopic(ctx, messageAccepted)
-		if err != nil {
-			logger.Error("failed to publish message", "err", err.Error())
-			return err
-		}
+		/*
+			this is commented out for now. We will still be sending all messages over the same topic, but messages can look different.
+			leaving this out until we know what we want to do
+
+			logger.Info("publishing message", "topic", messageAccepted.TopicName())
+			err = messenger.PublishOnTopic(ctx, messageAccepted)
+			if err != nil {
+				logger.Error("failed to publish message", "err", err.Error())
+				return err
+			}*/
 
 		return nil
 	}
@@ -146,7 +150,7 @@ func newTopicMessageHandler(messenger messaging.MsgContext, app application.App)
 
 		logger.Debug("received message", "body", string(msg.Body))
 
-		evt := events.MessageAccepted{}
+		evt := events.FunctionUpdated{}
 
 		err = json.Unmarshal(msg.Body, &evt)
 		if err != nil {
@@ -154,16 +158,10 @@ func newTopicMessageHandler(messenger messaging.MsgContext, app application.App)
 			return
 		}
 
-		err = evt.Error()
-		if err != nil {
-			logger.Warn("received malformed topic message", "err", err.Error())
-			return
-		}
-
-		logger = logger.With(slog.String("function_id", evt.ID))
+		logger = logger.With(slog.String("function_id", evt.ID()))
 		ctx = logging.NewContextWithLogger(ctx, logger)
 
-		err = app.MessageAccepted(ctx, evt, messenger)
+		err = app.FunctionUpdated(ctx, evt)
 		if err != nil {
 			logger.Error("failed to handle message", "err", err.Error())
 		}

@@ -27,6 +27,8 @@ type fnct struct {
 }
 
 func (f *fnct) Handle(context.Context, *events.FunctionUpdated, messaging.MsgContext) error {
+
+	//ta emot FunctionUpdated, kolla vilken typ av funktion det är.
 	return nil
 }
 
