@@ -13,7 +13,7 @@ import (
 
 type App interface {
 	MessageAccepted(ctx context.Context, evt events.MessageAccepted, msgctx messaging.MsgContext) error
-	MessageReceived(ctx context.Context, msg events.MessageReceived) (*events.MessageAccepted, error)
+	FunctionUpdated(ctx context.Context, msg events.FunctionUpdated) (*events.MessageAccepted, error)
 }
 
 type app struct {
@@ -49,8 +49,8 @@ func (a *app) MessageAccepted(ctx context.Context, evt events.MessageAccepted, m
 	return nil
 }
 
-func (a *app) MessageReceived(ctx context.Context, msg events.MessageReceived) (*events.MessageAccepted, error) {
-	messageAccepted, err := a.msgproc_.ProcessMessage(ctx, msg)
+func (a *app) FunctionUpdated(ctx context.Context, msg events.FunctionUpdated) (*events.MessageAccepted, error) {
+	messageAccepted, err := a.msgproc_.ProcessFunctionUpdated(ctx, msg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to process message: %w", err)
 	}

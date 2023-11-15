@@ -10,14 +10,14 @@ import (
 func TestThatTypeCanBeRetrievedFromMessage(t *testing.T) {
 	is := testSetup(t)
 
-	msgReceived := MessageReceived{}
+	fnctUpdated := FunctionUpdated{}
 
-	err := json.Unmarshal([]byte(incomingMsg), &msgReceived)
+	err := json.Unmarshal([]byte(incomingMsg), &fnctUpdated)
 	is.NoErr(err)
 
-	newMsg := NewMessageAccepted(msgReceived.ID_, msgReceived)
+	newMsg := NewMessageAccepted(fnctUpdated.ID_, fnctUpdated)
 
-	is.Equal(newMsg.FunctionType(), "Stopwatch")
+	is.Equal(newMsg.Type, "Stopwatch")
 }
 
 func testSetup(t *testing.T) *is.I {

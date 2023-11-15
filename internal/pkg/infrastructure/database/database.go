@@ -16,9 +16,6 @@ type Storage interface {
 	Create(ctx context.Context, id string, value any) error
 	Update(ctx context.Context, id string, value any) error
 	Exists(ctx context.Context, id string) bool
-	//Add(ctx context.Context, id, label string, value float64, timestamp time.Time) error
-	//AddFnct(ctx context.Context, id, fnType, subType, tenant, source string, lat, lon float64) error
-	//History(ctx context.Context, id, label string, lastN int) ([]LogValue, error)
 }
 
 type impl struct {

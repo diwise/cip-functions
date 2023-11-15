@@ -2,9 +2,8 @@ package events
 
 import (
 	"errors"
-	"time"
 
-	"github.com/diwise/iot-core/pkg/messaging/topics"
+	"github.com/diwise/cip-functions/pkg/messaging/topics"
 )
 
 type location struct {
@@ -12,7 +11,7 @@ type location struct {
 	Longitude float64 `json:"longitude"`
 }
 
-type MessageReceived struct {
+type FunctionUpdated struct {
 	ID_      string    `json:"id"`
 	Name_    string    `json:"name"`
 	Type     string    `json:"type"`
@@ -31,31 +30,21 @@ type MessageReceived struct {
 	Stopwatch Stopwatch `json:"Stopwatch,omitempty"`
 }
 
-func (m *MessageReceived) ContentType() string {
-	return "application/json"
-}
-
-func (m MessageReceived) FunctionID() string {
+func (m *FunctionUpdated) ID() string {
 	return m.ID_
 }
 
-func (m *MessageAccepted) FunctionType() string {
-	return m.Type
-}
-
 type EventDecoratorFunc func(m *MessageAccepted)
+
 type MessageAccepted struct {
-	ID        string `json:"functionID"`
-	Type      string `json:"type"`
-	Values    any    `json:"values"`
-	Timestamp string `json:"timestamp"`
+	ID   string `json:"id"`
+	Type string `json:"type"`
 }
 
-func NewMessageAccepted(functionID string, msg MessageReceived, decorators ...EventDecoratorFunc) *MessageAccepted {
+func NewMessageAccepted(functionID string, msg FunctionUpdated, decorators ...EventDecoratorFunc) *MessageAccepted {
 	m := &MessageAccepted{
-		ID:        functionID,
-		Type:      msg.Type,
-		Timestamp: time.Now().UTC().Format(time.RFC3339Nano),
+		ID:   msg.ID_,
+		Type: msg.Type,
 	}
 
 	for _, d := range decorators {
@@ -76,10 +65,6 @@ func (m *MessageAccepted) TopicName() string {
 func (m *MessageAccepted) Error() error {
 	if m.ID == "" {
 		return errors.New("function id is missing")
-	}
-
-	if m.Timestamp == "" {
-		return errors.New("timestamp is mising")
 	}
 
 	//add check for function names, such as levels, counters, stopwatch etc. If none exist, return error.

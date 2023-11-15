@@ -19,8 +19,8 @@ var _ MessageProcessor = &MessageProcessorMock{}
 //
 // 		// make and configure a mocked MessageProcessor
 // 		mockedMessageProcessor := &MessageProcessorMock{
-// 			ProcessMessageFunc: func(ctx context.Context, msg events.MessageReceived) (*events.MessageAccepted, error) {
-// 				panic("mock out the ProcessMessage method")
+// 			ProcessFunctionUpdatedFunc: func(ctx context.Context, msg events.FunctionUpdated) (*events.MessageAccepted, error) {
+// 				panic("mock out the ProcessFunctionUpdated method")
 // 			},
 // 		}
 //
@@ -29,53 +29,53 @@ var _ MessageProcessor = &MessageProcessorMock{}
 //
 // 	}
 type MessageProcessorMock struct {
-	// ProcessMessageFunc mocks the ProcessMessage method.
-	ProcessMessageFunc func(ctx context.Context, msg events.MessageReceived) (*events.MessageAccepted, error)
+	// ProcessFunctionUpdatedFunc mocks the ProcessFunctionUpdated method.
+	ProcessFunctionUpdatedFunc func(ctx context.Context, msg events.FunctionUpdated) (*events.MessageAccepted, error)
 
 	// calls tracks calls to the methods.
 	calls struct {
-		// ProcessMessage holds details about calls to the ProcessMessage method.
-		ProcessMessage []struct {
+		// ProcessFunctionUpdated holds details about calls to the ProcessFunctionUpdated method.
+		ProcessFunctionUpdated []struct {
 			// Ctx is the ctx argument value.
 			Ctx context.Context
 			// Msg is the msg argument value.
-			Msg events.MessageReceived
+			Msg events.FunctionUpdated
 		}
 	}
-	lockProcessMessage sync.RWMutex
+	lockProcessFunctionUpdated sync.RWMutex
 }
 
-// ProcessMessage calls ProcessMessageFunc.
-func (mock *MessageProcessorMock) ProcessMessage(ctx context.Context, msg events.MessageReceived) (*events.MessageAccepted, error) {
-	if mock.ProcessMessageFunc == nil {
-		panic("MessageProcessorMock.ProcessMessageFunc: method is nil but MessageProcessor.ProcessMessage was just called")
+// ProcessFunctionUpdated calls ProcessFunctionUpdatedFunc.
+func (mock *MessageProcessorMock) ProcessFunctionUpdated(ctx context.Context, msg events.FunctionUpdated) (*events.MessageAccepted, error) {
+	if mock.ProcessFunctionUpdatedFunc == nil {
+		panic("MessageProcessorMock.ProcessFunctionUpdatedFunc: method is nil but MessageProcessor.ProcessFunctionUpdated was just called")
 	}
 	callInfo := struct {
 		Ctx context.Context
-		Msg events.MessageReceived
+		Msg events.FunctionUpdated
 	}{
 		Ctx: ctx,
 		Msg: msg,
 	}
-	mock.lockProcessMessage.Lock()
-	mock.calls.ProcessMessage = append(mock.calls.ProcessMessage, callInfo)
-	mock.lockProcessMessage.Unlock()
-	return mock.ProcessMessageFunc(ctx, msg)
+	mock.lockProcessFunctionUpdated.Lock()
+	mock.calls.ProcessFunctionUpdated = append(mock.calls.ProcessFunctionUpdated, callInfo)
+	mock.lockProcessFunctionUpdated.Unlock()
+	return mock.ProcessFunctionUpdatedFunc(ctx, msg)
 }
 
-// ProcessMessageCalls gets all the calls that were made to ProcessMessage.
+// ProcessFunctionUpdatedCalls gets all the calls that were made to ProcessFunctionUpdated.
 // Check the length with:
-//     len(mockedMessageProcessor.ProcessMessageCalls())
-func (mock *MessageProcessorMock) ProcessMessageCalls() []struct {
+//     len(mockedMessageProcessor.ProcessFunctionUpdatedCalls())
+func (mock *MessageProcessorMock) ProcessFunctionUpdatedCalls() []struct {
 	Ctx context.Context
-	Msg events.MessageReceived
+	Msg events.FunctionUpdated
 } {
 	var calls []struct {
 		Ctx context.Context
-		Msg events.MessageReceived
+		Msg events.FunctionUpdated
 	}
-	mock.lockProcessMessage.RLock()
-	calls = mock.calls.ProcessMessage
-	mock.lockProcessMessage.RUnlock()
+	mock.lockProcessFunctionUpdated.RLock()
+	calls = mock.calls.ProcessFunctionUpdated
+	mock.lockProcessFunctionUpdated.RUnlock()
 	return calls
 }
