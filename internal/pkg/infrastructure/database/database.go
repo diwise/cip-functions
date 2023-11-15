@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+//go:generate moq -rm -out database_mock.go . Storage
 type Storage interface {
 	Initialize(ctx context.Context) error
 	Close()

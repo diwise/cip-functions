@@ -2,6 +2,7 @@ package combinedsewageoverflow
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/diwise/cip-functions/internal/pkg/application/functions"
@@ -11,7 +12,14 @@ import (
 )
 
 type SewageOverflow struct {
-	ID_         string     `json:"id"`
+	ID_ string `json:"id"`
+
+	storage    database.Storage     `json:"-"`
+	msgContext messaging.MsgContext `json:"-"`
+}
+
+type SewageOverflowObserved struct {
+	ID          string     `json:"id"`
 	Count       int        `json:"count"`
 	Duration    *time.Time `json:"duration,omitempty"`
 	Description string     `json:"description"`
@@ -20,9 +28,6 @@ type SewageOverflow struct {
 	State       bool       `json:"state"`
 	StartTime   *time.Time `json:"startTime"`
 	Timestamp   time.Time  `json:"timestamp"`
-
-	storage    database.Storage     `json:"-"`
-	msgContext messaging.MsgContext `json:"-"`
 }
 
 type Point struct {
@@ -30,17 +35,14 @@ type Point struct {
 	Lon float64 `json:"lon"`
 }
 
-// Function implements functions.Function.
 func (s *SewageOverflow) Function() string {
 	panic("unimplemented")
 }
 
-// ID implements functions.Function.
 func (s *SewageOverflow) ID() string {
 	return s.ID_
 }
 
-// Type implements functions.Function.
 func (s *SewageOverflow) Type() string {
 	panic("unimplemented")
 }
@@ -52,7 +54,29 @@ func New(s database.Storage, m messaging.MsgContext) functions.Function {
 	}
 }
 
-// Handle implements functions.Function.
 func (s *SewageOverflow) Handle(ctx context.Context, msg *events.FunctionUpdated, m messaging.MsgContext) error {
-	panic("unimplemented")
+	id := fmt.Sprintf("SewageOverflowObserved:%s", msg.ID()) // TODO: better ID generation
+
+	exists := s.storage.Exists(ctx, id)
+	if !exists {
+		s.storage.Create(ctx, id, SewageOverflowObserved{
+			ID: id,
+			// TODO add more fields
+		})
+	}
+
+	return nil
+}
+
+type SewageOverflowObservedStarted struct {
+	ID        string    `json:"id"`
+	Timestamp time.Time `json:"timestamp"`
+}
+
+func (s SewageOverflowObservedStarted) TopicName() string {
+	return "cip-functions.updated"
+}
+
+func (s SewageOverflowObservedStarted) ContentType() string {
+	return "application/vnd+diwise.sewageoverflowobservedstarted+json"
 }
