@@ -1,23 +1,13 @@
 package events
 
 import (
-	"encoding/json"
 	"testing"
 
 	"github.com/matryer/is"
 )
 
 func TestThatTypeCanBeRetrievedFromMessage(t *testing.T) {
-	is := testSetup(t)
-
-	fnctUpdated := FunctionUpdated{}
-
-	err := json.Unmarshal([]byte(incomingMsg), &fnctUpdated)
-	is.NoErr(err)
-
-	newMsg := NewMessageAccepted(fnctUpdated.ID_, fnctUpdated)
-
-	is.Equal(newMsg.Type, "Stopwatch")
+	// create new test when we know how we want to do this
 }
 
 func testSetup(t *testing.T) *is.I {

@@ -6,6 +6,7 @@ import (
 	"io"
 	"strings"
 
+	"github.com/diwise/cip-functions/internal/pkg/application/functions/pumpbrunn"
 	"github.com/diwise/cip-functions/internal/pkg/infrastructure/database"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
 )
@@ -39,6 +40,10 @@ func NewRegistry(ctx context.Context, input io.Reader, storage database.Storage)
 				ID_:       tokens[0],
 				Type_:     tokens[1],
 				Function_: tokens[2],
+			}
+
+			if f.Type_ == pumpbrunn.FunctionTypeName {
+				//something happens
 			}
 
 			database.CreateOrUpdate[fnct](ctx, storage, f.ID_, *f)

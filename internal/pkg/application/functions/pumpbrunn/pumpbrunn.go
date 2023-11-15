@@ -9,25 +9,25 @@ type Pumpbrunn interface {
 }
 
 type pb struct {
-	ID_    string `json:"id"`
-	State_ bool   `json:"state"`
+	id_    string `json:"id"`
+	state_ bool   `json:"state"`
 }
 
 func New(id string) Pumpbrunn {
 	p := &pb{
-		ID_:    id,
-		State_: false,
+		id_:    id,
+		state_: false,
 	}
 
 	return p
 }
 
 func (pb *pb) ID() string {
-	return pb.ID_
+	return pb.id_
 }
 
 func (pb *pb) State() bool {
-	return pb.State_
+	return pb.state_
 }
 
 func (pb *pb) Handle() error {

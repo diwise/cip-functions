@@ -7,13 +7,10 @@ import (
 	"github.com/diwise/cip-functions/internal/pkg/application/functions"
 	"github.com/diwise/cip-functions/internal/pkg/application/messageprocessor"
 	"github.com/diwise/cip-functions/pkg/messaging/events"
-	"github.com/diwise/messaging-golang/pkg/messaging"
-	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
 )
 
 type App interface {
-	MessageAccepted(ctx context.Context, evt events.MessageAccepted, msgctx messaging.MsgContext) error
-	FunctionUpdated(ctx context.Context, msg events.FunctionUpdated) (*events.MessageAccepted, error)
+	FunctionUpdated(ctx context.Context, msg events.FunctionUpdated) error
 }
 
 type app struct {
@@ -28,32 +25,12 @@ func New(msgproc messageprocessor.MessageProcessor, functionRegistry functions.R
 	}
 }
 
-func (a *app) MessageAccepted(ctx context.Context, evt events.MessageAccepted, msgctx messaging.MsgContext) error {
-	matchingFunctions, _ := a.functions_.Find(ctx, functions.MatchFunction(evt.ID)) //adding MatchFunction soon.
-
-	logger := logging.GetFromContext(ctx)
-	matchingCount := len(matchingFunctions)
-
-	if matchingCount > 0 {
-		logger.Debug("found matching functions", "count", matchingCount)
-	} else {
-		logger.Debug("no matching functions found")
-	}
-
-	for _, f := range matchingFunctions {
-		if err := f.Handle(ctx, &evt, msgctx); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (a *app) FunctionUpdated(ctx context.Context, msg events.FunctionUpdated) (*events.MessageAccepted, error) {
-	messageAccepted, err := a.msgproc_.ProcessFunctionUpdated(ctx, msg)
+func (a *app) FunctionUpdated(ctx context.Context, msg events.FunctionUpdated) error {
+	err := a.msgproc_.ProcessFunctionUpdated(ctx, msg)
 	if err != nil {
-		return nil, fmt.Errorf("failed to process message: %w", err)
+		return fmt.Errorf("failed to process message: %w", err)
 	}
 
-	return messageAccepted, nil
+	// should return something other than error. Message?
+	return nil
 }
