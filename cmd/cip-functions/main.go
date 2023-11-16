@@ -9,7 +9,7 @@ import (
 	"os"
 
 	"github.com/diwise/cip-functions/internal/pkg/application"
-	"github.com/diwise/cip-functions/internal/pkg/application/registry"
+	"github.com/diwise/cip-functions/internal/pkg/application/functions"
 	"github.com/diwise/cip-functions/internal/pkg/infrastructure/database"
 	"github.com/diwise/cip-functions/pkg/messaging/events"
 	"github.com/diwise/messaging-golang/pkg/messaging"
@@ -80,20 +80,20 @@ func createDatabaseConnectionOrDie(ctx context.Context) database.Storage {
 }
 
 func initialize(ctx context.Context, msgctx messaging.MsgContext, fconfig io.Reader, storage database.Storage) (application.App, error) {
-	fnRegistry, err := registry.NewRegistry(ctx, fconfig, storage)
+	fnRegistry, err := functions.NewRegistry(ctx, fconfig)
 	if err != nil {
 		return nil, err
 	}
 
-	app := application.New(fnRegistry)
+	app := application.New(storage, msgctx, fnRegistry)
 
 	routingKey := "function.updated"
-	msgctx.RegisterTopicMessageHandler(routingKey, newTopicMessageHandler(msgctx, app))
+	msgctx.RegisterTopicMessageHandler(routingKey, newTopicMessageHandler(app))
 
 	return app, nil
 }
 
-func newTopicMessageHandler(messenger messaging.MsgContext, app application.App) messaging.TopicMessageHandler {
+func newTopicMessageHandler(app application.App) messaging.TopicMessageHandler {
 	return func(ctx context.Context, msg amqp.Delivery, logger *slog.Logger) {
 		var err error
 

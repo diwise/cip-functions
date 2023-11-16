@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/diwise/cip-functions/internal/pkg/application/functions"
+	"github.com/diwise/cip-functions/internal/pkg/application/functions/options"
 	"github.com/diwise/cip-functions/internal/pkg/infrastructure/database"
 	"github.com/diwise/cip-functions/pkg/messaging/events"
 	"github.com/diwise/cip-functions/pkg/messaging/topics"
@@ -13,10 +13,15 @@ import (
 )
 
 type SewageOverflow struct {
-	ID_ string `json:"id"`
+	storage database.Storage     `json:"-"`
+	msgCtx  messaging.MsgContext `json:"-"`
+}
 
-	storage    database.Storage     `json:"-"`
-	msgContext messaging.MsgContext `json:"-"`
+func New(s database.Storage, msgctx messaging.MsgContext) SewageOverflow {
+	return SewageOverflow{
+		storage: s,
+		msgCtx:  msgctx,
+	}
 }
 
 type SewageOverflowObserved struct {
@@ -36,15 +41,7 @@ type Point struct {
 	Lon float64 `json:"lon"`
 }
 
-
-func New(s database.Storage, m messaging.MsgContext) functions.Function {
-	return &SewageOverflow{
-		storage:    s,
-		msgContext: m,
-	}
-}
-
-func (s *SewageOverflow) Handle(ctx context.Context, msg *events.FunctionUpdated) error {
+func (s *SewageOverflow) Handle(ctx context.Context, msg *events.FunctionUpdated, options ...options.Option) error {
 	id := fmt.Sprintf("SewageOverflowObserved:%s", msg.ID) // TODO: better ID generation
 
 	exists := s.storage.Exists(ctx, id)
