@@ -6,9 +6,29 @@ import (
 	"io"
 	"strings"
 
+	"github.com/diwise/cip-functions/internal/pkg/application/functions/combinedsewageoverflow"
 	"github.com/diwise/cip-functions/internal/pkg/application/functions/options"
+	"github.com/diwise/cip-functions/internal/pkg/infrastructure/database"
+	"github.com/diwise/messaging-golang/pkg/messaging"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
 )
+
+type Fnct interface {
+	ID() string
+}
+
+type fnctImpl struct {
+	id string
+	storage database.Storage
+	msgCtx  messaging.MsgContext
+
+	SewageOverflow combinedsewageoverflow.SewageOverflow
+}
+
+func (fn *fnctImpl) ID() string {
+	return fn.id
+}
+
 
 //go:generate moq -rm -out registry_mock.go . Registry
 type Registry interface {
