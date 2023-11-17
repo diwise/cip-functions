@@ -25,12 +25,12 @@ func TestFind(t *testing.T) {
 	reg, err := NewRegistry(ctx, bytes.NewBufferString(cip_functions_csv))
 	is.NoErr(err)
 
-	items, err := reg.Find(ctx, FindByID("fnID:002"))
+	items, err := reg.Find(ctx, FindByFunctionID("fnID:002"))
 	is.NoErr(err)
 
 	is.Equal(len(items), 1)
 	is.Equal(items[0].FnID, "fnID:002")
-	is.Equal(items[0].Name, "combinedsewageoverflow")
+	is.Equal(items[0].Type, "combinedsewageoverflow")
 	is.Equal(len(items[0].Options), 3)
 }
 

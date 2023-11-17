@@ -35,13 +35,13 @@ func (a *app) FunctionUpdated(ctx context.Context, msg events.FunctionUpdated) e
 
 	//TODO: get function from registry and call Handle on it
 
-	registryItems, err := a.fnRegistry.Find(ctx, functions.FindByID(msg.ID))
+	registryItems, err := a.fnRegistry.Find(ctx, functions.FindByFunctionID(msg.ID))
 	if err != nil {
 		return err
 	}
 
 	for _, item := range registryItems {
-		switch item.Name {
+		switch item.Type {
 		case "combinedsewageoverflow":
 			// TODO: exec in goroutine?
 			cso := combinedsewageoverflow.New(a.storage, a.msgCtx)
@@ -51,7 +51,7 @@ func (a *app) FunctionUpdated(ctx context.Context, msg events.FunctionUpdated) e
 				return err
 			}
 		default:
-			log.Debug("unknown function", "name", item.Name)
+			log.Debug("unknown function", "name", item.Type)
 		}
 	}
 
