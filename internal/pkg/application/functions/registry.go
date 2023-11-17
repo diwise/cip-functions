@@ -41,7 +41,7 @@ type registry struct {
 
 type RegistryItem struct {
 	FnID    string
-	Name    string
+	Type    string
 	Options []options.Option
 }
 
@@ -81,7 +81,7 @@ func NewRegistry(ctx context.Context, input io.Reader) (Registry, error) {
 func rowToRegistryItem(row []string) RegistryItem {
 	return RegistryItem{
 		FnID:    row[0],
-		Name:    row[1],
+		Type:    row[1],
 		Options: strToArgs(row[2]),
 	}
 }
@@ -115,7 +115,7 @@ func (r *registry) Find(ctx context.Context, matchers ...RegistryMatcherFunc) ([
 
 type RegistryMatcherFunc func(r *registry) []RegistryItem
 
-func FindByID(functionId string) RegistryMatcherFunc {
+func FindByFunctionID(functionId string) RegistryMatcherFunc {
 	return func(r *registry) []RegistryItem {
 		fn := make([]RegistryItem, 0)
 
