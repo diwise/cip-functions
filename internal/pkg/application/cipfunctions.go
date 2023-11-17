@@ -42,7 +42,7 @@ func (a *app) FunctionUpdated(ctx context.Context, msg events.FunctionUpdated) e
 
 	for _, item := range registryItems {
 		switch item.Name {
-		case "combinedsewageoverflow":
+		case combinedsewageoverflow.FunctionName:
 			// TODO: exec in goroutine?
 			cso := combinedsewageoverflow.New(a.storage, a.msgCtx)
 			err := cso.Handle(ctx, &msg, item.Options...)

@@ -1,6 +1,6 @@
 package events
 
-
+import "time"
 
 type FunctionUpdated struct {
 	ID       string    `json:"id"`
@@ -19,6 +19,15 @@ type FunctionUpdated struct {
 	Building     buildings.Building          `json:"building,omitempty"`
 	AirQuality   airquality.AirQuality       `json:"AirQuality,omitempty"`
 	Stopwatch Stopwatch `json:"Stopwatch,omitempty"` */
+
+	Stopwatch struct {
+		Count          int32          `json:"count"`
+		CumulativeTime time.Duration  `json:"cumulativeTime"`
+		Duration       *time.Duration `json:"duration,omitempty"`
+		StartTime      time.Time      `json:"startTime"`
+		State          bool           `json:"state"`
+		StopTime       *time.Time     `json:"stopTime,omitempty"`
+	} `json:"Stopwatch,omitempty"`
 }
 
 type Location struct {

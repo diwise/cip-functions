@@ -12,9 +12,12 @@ import (
 	"github.com/diwise/messaging-golang/pkg/messaging"
 )
 
+const FunctionName string = "combinedsewageoverflow"
+
 type SewageOverflow struct {
-	storage database.Storage     `json:"-"`
-	msgCtx  messaging.MsgContext `json:"-"`
+	storage database.Storage
+	msgCtx  messaging.MsgContext
+	current SewageOverflowObserved
 }
 
 func New(s database.Storage, msgctx messaging.MsgContext) SewageOverflow {
@@ -25,15 +28,13 @@ func New(s database.Storage, msgctx messaging.MsgContext) SewageOverflow {
 }
 
 type SewageOverflowObserved struct {
-	ID          string     `json:"id"`
-	Count       int        `json:"count"`
-	Duration    *time.Time `json:"duration,omitempty"`
-	Description string     `json:"description"`
-	EndTime     *time.Time `json:"endTime,omitempty"`
-	Location    Point      `json:"location"`
-	State       bool       `json:"state"`
-	StartTime   *time.Time `json:"startTime"`
-	Timestamp   time.Time  `json:"timestamp"`
+	ID        string         `json:"id"`
+	Count     int32          `json:"count"`
+	Duration  *time.Duration `json:"duration,omitempty"`
+	EndTime   *time.Time     `json:"endTime,omitempty"`
+	State     bool           `json:"state"`
+	StartTime *time.Time     `json:"startTime"`
+	Timestamp time.Time      `json:"timestamp"`
 }
 
 type Point struct {
@@ -41,30 +42,40 @@ type Point struct {
 	Lon float64 `json:"lon"`
 }
 
-func (s *SewageOverflow) Handle(ctx context.Context, msg *events.FunctionUpdated, options ...options.Option) error {
-	id := fmt.Sprintf("SewageOverflowObserved:%s", msg.ID) // TODO: better ID generation
+func (s *SewageOverflow) Handle(ctx context.Context, msg *events.FunctionUpdated, opts ...options.Option) error {
+	var err error
+	
+	sufix, ok := options.Exists(opts, "cipID") // TODO: add constant
+	if !ok {
+		sufix = msg.ID
+	}
+
+	id := fmt.Sprintf("SewageOverflowObserved:%s", sufix)
 
 	exists := s.storage.Exists(ctx, id)
 	if !exists {
-		s.storage.Create(ctx, id, SewageOverflowObserved{
-			ID: id,
-			// TODO add more fields
-		})
+		s.current = SewageOverflowObserved{
+			ID:        id,
+			Count:     msg.Stopwatch.Count,
+			Duration:  msg.Stopwatch.Duration,
+			State:     msg.Stopwatch.State,
+			StartTime: &msg.Stopwatch.StartTime,
+			Timestamp: time.Now().UTC(),
+		}
+	} else {
+		s.current, err = database.Get[SewageOverflowObserved](ctx, s.storage, id)
+		if err != nil {
+			return err
+		}
 	}
 
-	// TODO: publish events to message broker
-	return nil
+	return s.msgCtx.PublishOnTopic(ctx, s.current)
 }
 
-type SewageOverflowObservedStarted struct {
-	ID        string    `json:"id"`
-	Timestamp time.Time `json:"timestamp"`
-}
-
-func (s SewageOverflowObservedStarted) TopicName() string {
+func (s SewageOverflowObserved) TopicName() string {
 	return topics.CipFunctionsUpdated
 }
 
-func (s SewageOverflowObservedStarted) ContentType() string {
-	return "application/vnd+diwise.sewageoverflowobservedstarted+json"
+func (s SewageOverflowObserved) ContentType() string {
+	return "application/vnd+diwise.SewageOverflowObserved+json"
 }
