@@ -17,18 +17,12 @@ type SumpPump interface {
 }
 
 type sp struct {
-	id    string
-	state bool
-
 	storage database.Storage
 	msgCtx  messaging.MsgContext
 }
 
-func New(storage database.Storage, msgCtx messaging.MsgContext, id string) SumpPump {
+func New(storage database.Storage, msgCtx messaging.MsgContext) SumpPump {
 	sp := &sp{
-		id:    id,
-		state: false,
-
 		storage: storage,
 		msgCtx:  msgCtx,
 	}
@@ -38,7 +32,7 @@ func New(storage database.Storage, msgCtx messaging.MsgContext, id string) SumpP
 
 type SumpPumpObserved struct {
 	ID           string     `json:"id"`
-	AlertID      string     `json:"alertId"`
+	AlertID      string     `json:"alertId,omitempty"`
 	State        bool       `json:"state"`
 	StartTime    *time.Time `json:"startTime,omitempty"`
 	EndTime      *time.Time `json:"endTime,omitempty"`
@@ -47,7 +41,7 @@ type SumpPumpObserved struct {
 
 func (sp *sp) Handle(ctx context.Context, msg *events.FunctionUpdated, options ...options.Option) error {
 	//generate ID
-	id := fmt.Sprintf("SumpPumpObserved:%s", sp.id)
+	id := fmt.Sprintf("SumpPumpObserved:%s", msg.ID)
 
 	//check if it already exists in database
 	exists := sp.storage.Exists(ctx, id)
@@ -55,13 +49,27 @@ func (sp *sp) Handle(ctx context.Context, msg *events.FunctionUpdated, options .
 		time := time.Now().UTC()
 		err := sp.storage.Create(ctx, id, SumpPumpObserved{
 			ID:           id,
-			State:        sp.state,
+			State:        msg.Stopwatch.State,
 			LastObserved: &time,
 		})
 		if err != nil {
 			return err
 		}
+
+		if msg.Stopwatch.State {
+			alertID := fmt.Sprintf("Alert:alertID:%s", id) //TODO: better ID generation
+			err = sp.storage.Create(ctx, fmt.Sprintf("%s:alert:", id), Alert{
+				ID:        alertID,
+				State:     msg.Stopwatch.State,
+				StartTime: &msg.Stopwatch.StartTime,
+			})
+			if err != nil {
+				return err
+			}
+		}
 	} else if exists {
+		spo := SumpPumpObserved{}
+
 		spo, err := database.Get[SumpPumpObserved](ctx, sp.storage, id)
 		if err != nil {
 			return err
@@ -71,14 +79,30 @@ func (sp *sp) Handle(ctx context.Context, msg *events.FunctionUpdated, options .
 
 		//if it already exists, and state has now changed create a new pumpbrunn/alert
 		if spo.State != msg.Stopwatch.State {
-			if spo.AlertID != "" {
-				sp.storage.Update(ctx, id, spo.State)
+			if spo.AlertID == "" {
+				alert := Alert{
+					ID:        "generateAnAlertID",
+					Owner:     spo.ID,
+					State:     msg.Stopwatch.State,
+					StartTime: &msg.Stopwatch.StartTime,
+				}
+				sp.storage.Create(ctx, id, alert)
+
+				//TODO: send created alert on queue
+
+				spo.AlertID = alert.ID
+
+				sp.storage.Update(ctx, id, spo)
+			} else {
+				//update existing alert with new timestamp and/or endTime
+				//spo.LastObserved = msg.LastObserved or something like that.
+				sp.storage.Update(ctx, id, spo)
 			}
-			//either create new alert or close existing alert.
+		} else {
+			//if state is the same, but there IS an active alert, update lastObserved
+			//post message to cip-functions.updated
 		}
 	}
-
-	//post message to cip-functions.updated
 
 	return nil
 }

@@ -52,7 +52,7 @@ func (a *app) FunctionUpdated(ctx context.Context, msg events.FunctionUpdated) e
 				return err
 			}
 		case "sumppump":
-			sp := sumppump.New(a.storage, a.msgCtx, item.FnID)
+			sp := sumppump.New(a.storage, a.msgCtx)
 			err := sp.Handle(ctx, &msg, item.Options...)
 			if err != nil {
 				return err
