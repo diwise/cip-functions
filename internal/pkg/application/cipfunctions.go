@@ -5,6 +5,7 @@ import (
 
 	"github.com/diwise/cip-functions/internal/pkg/application/functions"
 	"github.com/diwise/cip-functions/internal/pkg/application/functions/combinedsewageoverflow"
+	"github.com/diwise/cip-functions/internal/pkg/application/functions/sumppump"
 	"github.com/diwise/cip-functions/internal/pkg/infrastructure/database"
 	"github.com/diwise/cip-functions/pkg/messaging/events"
 	"github.com/diwise/messaging-golang/pkg/messaging"
@@ -48,6 +49,12 @@ func (a *app) FunctionUpdated(ctx context.Context, msg events.FunctionUpdated) e
 			err := cso.Handle(ctx, &msg, item.Options...)
 			if err != nil {
 				// TODO: log error and continue?
+				return err
+			}
+		case "sumppump":
+			sp := sumppump.New(a.storage, a.msgCtx, item.FnID)
+			err := sp.Handle(ctx, &msg, item.Options...)
+			if err != nil {
 				return err
 			}
 		default:
