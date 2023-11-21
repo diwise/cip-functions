@@ -5,7 +5,7 @@ import (
 
 	"github.com/diwise/cip-functions/internal/pkg/application/functions/combinedsewageoverflow"
 	"github.com/diwise/cip-functions/internal/pkg/application/functions/options"
-	"github.com/diwise/cip-functions/internal/pkg/application/functions/sumppump"
+	"github.com/diwise/cip-functions/internal/pkg/application/functions/sewagepumpingstation"
 	"github.com/diwise/cip-functions/internal/pkg/infrastructure/database"
 	"github.com/diwise/cip-functions/pkg/messaging/events"
 	"github.com/diwise/messaging-golang/pkg/messaging"
@@ -22,8 +22,8 @@ type fnImpl struct {
 	ID_   string `json:"id"`
 	Type_ string `json:"type"`
 
-	SewageOverflow combinedsewageoverflow.SewageOverflow `json:"sewageOverflow,omitempty"`
-	SumpPump       sumppump.SumpPump                     `json:"sumpPump,omitempty"`
+	SewageOverflow       combinedsewageoverflow.SewageOverflow     `json:"sewageOverflow,omitempty"`
+	SewagePumpingStation sewagepumpingstation.SewagePumpingStation `json:"sewagepumpingstation,omitempty"`
 
 	handle func(ctx context.Context, msg *events.FunctionUpdated, storage database.Storage, msgCtx messaging.MsgContext, opts ...options.Option) error
 }

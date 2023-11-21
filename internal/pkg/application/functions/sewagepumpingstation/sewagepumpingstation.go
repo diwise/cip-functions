@@ -12,6 +12,8 @@ import (
 	"github.com/diwise/messaging-golang/pkg/messaging"
 )
 
+const FunctionName string = "sewagepumpingstation"
+
 type SewagePumpingStation interface {
 	Handle(ctx context.Context, msg *events.FunctionUpdated, storage database.Storage, msgCtx messaging.MsgContext, opts ...options.Option) error
 }
@@ -93,8 +95,7 @@ func (sp *sp) Handle(ctx context.Context, msg *events.FunctionUpdated, storage d
 				//TODO: send created alert on queue
 
 			} else { // Om alertId finns, dvs alert finns, stänga alerten
-				alert := Alert{}
-				alert, err = database.Get[Alert](ctx, storage, id)
+				alert, err := database.Get[Alert](ctx, storage, id)
 				if err != nil {
 					return err
 				}
