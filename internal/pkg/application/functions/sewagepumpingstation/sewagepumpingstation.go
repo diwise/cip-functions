@@ -28,10 +28,8 @@ func New() SewagePumpingStation {
 }
 
 type SewagePumpingStationObserved struct {
-	ID          string `json:"id"`
-	ActiveAlert struct {
-		AlertID string `json:"alertId,omitempty"`
-	} `json:"activeAlert,omitempty"`
+	ID             string     `json:"id"`
+	ActiveAlert    string     `json:"activeAlert,omitempty"`
 	PreviousAlerts []string   `json:"previousAlerts,omitempty"`
 	State          bool       `json:"state"`
 	StartTime      *time.Time `json:"startTime,omitempty"`
@@ -79,7 +77,7 @@ func (sp *sp) Handle(ctx context.Context, msg *events.FunctionUpdated, storage d
 		// kolla om det finns en aktiv alert om nej skapa en ny alert
 		// om aktiv alert finns uppdatera alert och ta bort alertId på pumpbrunn - gäller true to false
 		if spo.State != msg.Stopwatch.State {
-			if spo.ActiveAlert.AlertID == "" {
+			if spo.ActiveAlert == "" {
 				alert := Alert{
 					ID:          "generateAnAlertID",
 					AlertSource: spo.ID,
@@ -88,7 +86,7 @@ func (sp *sp) Handle(ctx context.Context, msg *events.FunctionUpdated, storage d
 				}
 				storage.Create(ctx, id, alert)
 
-				spo.ActiveAlert.AlertID = alert.ID
+				spo.ActiveAlert = alert.ID
 				spo.LastObserved = alert.StartTime
 
 				storage.Update(ctx, id, spo)
@@ -100,12 +98,10 @@ func (sp *sp) Handle(ctx context.Context, msg *events.FunctionUpdated, storage d
 					return err
 				}
 				alert.State = msg.Stopwatch.State
-				alert.StartTime = msg.Stopwatch.StopTime
+				alert.EndTime = msg.Stopwatch.StopTime
 				spo.PreviousAlerts = append(spo.PreviousAlerts, alert.ID)
-				spo.ActiveAlert.AlertID = ""
+				spo.ActiveAlert = ""
 
-				//update existing alert with new timestamp and/or endTime
-				//spo.LastObserved = msg.LastObserved or something like that.
 				storage.Update(ctx, id, spo)
 			}
 		} else {

@@ -3,13 +3,14 @@ package events
 import "time"
 
 type FunctionUpdated struct {
-	ID       string    `json:"id"`
-	Name     string    `json:"name"`
-	Type     string    `json:"type"`
-	SubType  string    `json:"subtype"`
-	Location *Location `json:"location,omitempty"`
-	Tenant   string    `json:"tenant,omitempty"`
-	Source   string    `json:"source,omitempty"`
+	ID        string    `json:"id"`
+	Name      string    `json:"name"`
+	Type      string    `json:"type"`
+	SubType   string    `json:"subtype"`
+	Location  *Location `json:"location,omitempty"`
+	Tenant    string    `json:"tenant,omitempty"`
+	Source    string    `json:"source,omitempty"`
+	Timestamp time.Time `json:"timestamp,omitempty"`
 
 	/*Counter      counters.Counter            `json:"counter,omitempty"`
 	Level        levels.Level                `json:"level,omitempty"`
