@@ -147,6 +147,15 @@ func Get[T any](ctx context.Context, storage Storage, id string) (T, error) {
 	return t, nil
 }
 
+func GetOrDefault[T any](ctx context.Context, storage Storage, id string, defaultValue T) (T, error) {
+	t, err := Get[T](ctx, storage, id)
+	if err != nil {
+		return defaultValue, nil
+	}
+
+	return t, nil
+}
+
 func CreateOrUpdate[T any](ctx context.Context, storage Storage, id string, value T) error {
 	var err error
 

@@ -12,20 +12,17 @@ import (
 	"github.com/diwise/messaging-golang/pkg/messaging"
 )
 
+const FunctionName string = "sumppump"
+
 type SumpPump interface {
-	Handle(ctx context.Context, msg *events.FunctionUpdated, options ...options.Option) error
+	Handle(ctx context.Context, msg *events.FunctionUpdated, storage database.Storage, msgCtx messaging.MsgContext, opts ...options.Option) error
 }
 
 type sp struct {
-	storage database.Storage
-	msgCtx  messaging.MsgContext
 }
 
-func New(storage database.Storage, msgCtx messaging.MsgContext) SumpPump {
-	sp := &sp{
-		storage: storage,
-		msgCtx:  msgCtx,
-	}
+func New() SumpPump {
+	sp := &sp{}
 
 	return sp
 }
@@ -39,15 +36,15 @@ type SumpPumpObserved struct {
 	LastObserved *time.Time `json:"lastObserved"`
 }
 
-func (sp *sp) Handle(ctx context.Context, msg *events.FunctionUpdated, options ...options.Option) error {
+func (sp *sp) Handle(ctx context.Context, msg *events.FunctionUpdated, storage database.Storage, msgCtx messaging.MsgContext, opts ...options.Option) error {
 	//generate ID
 	id := fmt.Sprintf("SumpPumpObserved:%s", msg.ID)
 
 	//check if it already exists in database
-	exists := sp.storage.Exists(ctx, id)
+	exists := storage.Exists(ctx, id)
 	if !exists {
 		time := time.Now().UTC()
-		err := sp.storage.Create(ctx, id, SumpPumpObserved{
+		err := storage.Create(ctx, id, SumpPumpObserved{
 			ID:           id,
 			State:        msg.Stopwatch.State,
 			LastObserved: &time,
@@ -58,7 +55,7 @@ func (sp *sp) Handle(ctx context.Context, msg *events.FunctionUpdated, options .
 
 		if msg.Stopwatch.State {
 			alertID := fmt.Sprintf("Alert:alertID:%s", id) //TODO: better ID generation
-			err = sp.storage.Create(ctx, fmt.Sprintf("%s:alert:", id), Alert{
+			err = storage.Create(ctx, fmt.Sprintf("%s:alert:", id), Alert{
 				ID:        alertID,
 				State:     msg.Stopwatch.State,
 				StartTime: &msg.Stopwatch.StartTime,
@@ -70,7 +67,7 @@ func (sp *sp) Handle(ctx context.Context, msg *events.FunctionUpdated, options .
 	} else if exists {
 		spo := SumpPumpObserved{}
 
-		spo, err := database.Get[SumpPumpObserved](ctx, sp.storage, id)
+		spo, err := database.Get[SumpPumpObserved](ctx, storage, id)
 		if err != nil {
 			return err
 		}
@@ -86,17 +83,17 @@ func (sp *sp) Handle(ctx context.Context, msg *events.FunctionUpdated, options .
 					State:     msg.Stopwatch.State,
 					StartTime: &msg.Stopwatch.StartTime,
 				}
-				sp.storage.Create(ctx, id, alert)
+				storage.Create(ctx, id, alert)
 
 				//TODO: send created alert on queue
 
 				spo.AlertID = alert.ID
 
-				sp.storage.Update(ctx, id, spo)
+				storage.Update(ctx, id, spo)
 			} else {
 				//update existing alert with new timestamp and/or endTime
 				//spo.LastObserved = msg.LastObserved or something like that.
-				sp.storage.Update(ctx, id, spo)
+				storage.Update(ctx, id, spo)
 			}
 		} else {
 			//if state is the same, but there IS an active alert, update lastObserved

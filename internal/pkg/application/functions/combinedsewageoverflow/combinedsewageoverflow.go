@@ -15,7 +15,10 @@ import (
 const FunctionName string = "combinedsewageoverflow"
 
 type SewageOverflow struct {
-	current SewageOverflowObserved
+	ID       string `json:"id"`
+	State    bool   `json:"state"`
+	Location Point  `json:"location"`
+	Tenant   string `json:"tenant"`
 }
 
 func New() SewageOverflow {
@@ -40,31 +43,65 @@ type Point struct {
 func (s *SewageOverflow) Handle(ctx context.Context, msg *events.FunctionUpdated, storage database.Storage, msgCtx messaging.MsgContext, opts ...options.Option) error {
 	var err error
 
-	sufix, ok := options.Exists(opts, "cipID") // TODO: add constant
-	if !ok {
-		sufix = msg.ID
+	current, err := database.GetOrDefault[SewageOverflow](ctx, storage, msg.ID, SewageOverflow{
+		ID:    msg.ID,
+		State: false,
+		Location: Point{
+			Lat: msg.Location.Latitude,
+			Lon: msg.Location.Longitude,
+		},
+		Tenant: msg.Tenant,
+	})
+	if err != nil {
+		return err
 	}
 
-	id := fmt.Sprintf("SewageOverflowObserved:%s", sufix)
+	if current.State != msg.Stopwatch.State {
+		current.State = msg.Stopwatch.State
 
-	exists := storage.Exists(ctx, id)
-	if !exists {
-		s.current = SewageOverflowObserved{
-			ID:        id,
-			Count:     msg.Stopwatch.Count,
-			Duration:  msg.Stopwatch.Duration,
-			State:     msg.Stopwatch.State,
-			StartTime: &msg.Stopwatch.StartTime,
-			Timestamp: time.Now().UTC(),
+		id := fmt.Sprintf("sewageoverflowobserved:%s:%d", msg.ID, msg.Stopwatch.StartTime.Unix())
+		observation, err := database.GetOrDefault[SewageOverflowObserved](ctx, storage, id, SewageOverflowObserved{})
+		if err != nil {
+			return err
 		}
-	} else {
-		s.current, err = database.Get[SewageOverflowObserved](ctx, storage, id)
+
+		if msg.Stopwatch.State {
+			observation = SewageOverflowObserved{
+				ID:        id,
+				Count:     msg.Stopwatch.Count,
+				Duration:  msg.Stopwatch.Duration,
+				State:     msg.Stopwatch.State,
+				StartTime: &msg.Stopwatch.StartTime,
+				Timestamp: time.Now().UTC(),
+			}
+
+			err = storage.Create(ctx, observation.ID, observation)
+			if err != nil {
+				return err
+			}
+		} else {
+			if observation.EndTime != nil {
+				return fmt.Errorf("observation already ended")
+			}
+
+			observation.Duration = msg.Stopwatch.Duration
+			observation.EndTime = msg.Stopwatch.StopTime
+			observation.State = msg.Stopwatch.State
+			observation.Timestamp = time.Now().UTC()
+
+			err = storage.Update(ctx, observation.ID, observation)
+			if err != nil {
+				return err
+			}
+		}
+
+		err = msgCtx.PublishOnTopic(ctx, observation)
 		if err != nil {
 			return err
 		}
 	}
 
-	return msgCtx.PublishOnTopic(ctx, s.current)
+	return database.CreateOrUpdate[SewageOverflow](ctx, storage, current.ID, current)
 }
 
 func (s SewageOverflowObserved) TopicName() string {
@@ -72,5 +109,5 @@ func (s SewageOverflowObserved) TopicName() string {
 }
 
 func (s SewageOverflowObserved) ContentType() string {
-	return "application/vnd+diwise.SewageOverflowObserved+json"
+	return "application/vnd+diwise.sewageoverflowobserved+json"
 }
