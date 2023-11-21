@@ -10,6 +10,7 @@ import (
 	"github.com/diwise/cip-functions/pkg/messaging/events"
 	"github.com/diwise/cip-functions/pkg/messaging/topics"
 	"github.com/diwise/messaging-golang/pkg/messaging"
+	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
 )
 
 const FunctionName string = "combinedsewageoverflow"
@@ -42,6 +43,13 @@ type Point struct {
 
 func (s *SewageOverflow) Handle(ctx context.Context, msg *events.FunctionUpdated, storage database.Storage, msgCtx messaging.MsgContext, opts ...options.Option) error {
 	var err error
+
+	log := logging.GetFromContext(ctx)
+
+	if msg.Type != "stopwatch" && msg.SubType != "overflow" {
+		log.Info("invalid function type", "id", msg.ID, "type", msg.Type, "sub_type", msg.SubType)
+		return nil
+	}
 
 	current, err := database.GetOrDefault[SewageOverflow](ctx, storage, msg.ID, SewageOverflow{
 		ID:    msg.ID,
