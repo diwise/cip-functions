@@ -1,4 +1,4 @@
-package sumppump
+package sewagepumpingstation
 
 import (
 	"context"
@@ -11,7 +11,7 @@ import (
 	"github.com/matryer/is"
 )
 
-func TestSumpPumpHandleCreatesNewIfIDDoesNotExist(t *testing.T) {
+func TestSewagePumpingStationHandleCreatesNewIfIDDoesNotExist(t *testing.T) {
 	is, dbMock, msgCtxMock := testSetup(t)
 
 	msg := events.FunctionUpdated{
@@ -34,7 +34,7 @@ func TestSumpPumpHandleCreatesNewIfIDDoesNotExist(t *testing.T) {
 	is.True(len(dbMock.CreateCalls()) == 1)
 }
 
-func TestSumpPumpHandleChecksIfStateUpdatedOnExisting(t *testing.T) {
+func TestSewagePumpingStationHandleChecksIfStateUpdatedOnExisting(t *testing.T) {
 	is, dbMock, msgCtxMock := testSetup(t)
 
 	msg := events.FunctionUpdated{
@@ -71,7 +71,7 @@ func testSetup(t *testing.T) (*is.I, *database.StorageMock, *messaging.MsgContex
 
 	dbMock := &database.StorageMock{
 		ExistsFunc: func(ctx context.Context, id string) bool {
-			if id == "SumpPumpObserved:fnID:004" {
+			if id == "SewagePumpingStationObserved:fnID:004" {
 				return true
 			} else {
 				return false
@@ -84,8 +84,8 @@ func testSetup(t *testing.T) (*is.I, *database.StorageMock, *messaging.MsgContex
 			return nil
 		},
 		SelectFunc: func(ctx context.Context, id string) (any, error) {
-			return SumpPumpObserved{
-				ID:      "SumpPumpObserved:fnID:004",
+			return SewagePumpingStationObserved{
+				ID:      "SewagePumpingStationObserved:fnID:004",
 				AlertID: "",
 				State:   false,
 			}, nil

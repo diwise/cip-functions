@@ -1,4 +1,4 @@
-package sumppump
+package sewagepumpingstation
 
 import (
 	"context"
@@ -12,7 +12,7 @@ import (
 	"github.com/diwise/messaging-golang/pkg/messaging"
 )
 
-type SumpPump interface {
+type SewagePumpingStation interface {
 	Handle(ctx context.Context, msg *events.FunctionUpdated, options ...options.Option) error
 }
 
@@ -21,7 +21,7 @@ type sp struct {
 	msgCtx  messaging.MsgContext
 }
 
-func New(storage database.Storage, msgCtx messaging.MsgContext) SumpPump {
+func New(storage database.Storage, msgCtx messaging.MsgContext) SewagePumpingStation {
 	sp := &sp{
 		storage: storage,
 		msgCtx:  msgCtx,
@@ -30,9 +30,14 @@ func New(storage database.Storage, msgCtx messaging.MsgContext) SumpPump {
 	return sp
 }
 
-type SumpPumpObserved struct {
-	ID           string     `json:"id"`
-	AlertID      string     `json:"alertId,omitempty"`
+type SewagePumpingStationObserved struct {
+	ID          string `json:"id"`
+	ActiveAlert struct {
+		State     bool       `json:"state"`
+		AlertID   string     `json:"alertId,omitempty"`
+		Timestamp *time.Time `json:"timestamp,omitempty"`
+	} `json:"activeAlert,omitempty"`
+	Alerts       []string   `json:"alerts,omitempty"`
 	State        bool       `json:"state"`
 	StartTime    *time.Time `json:"startTime,omitempty"`
 	EndTime      *time.Time `json:"endTime,omitempty"`
@@ -41,13 +46,13 @@ type SumpPumpObserved struct {
 
 func (sp *sp) Handle(ctx context.Context, msg *events.FunctionUpdated, options ...options.Option) error {
 	//generate ID
-	id := fmt.Sprintf("SumpPumpObserved:%s", msg.ID)
+	id := fmt.Sprintf("SewagePumpingStationObserved:%s", msg.ID)
 
 	//check if it already exists in database
 	exists := sp.storage.Exists(ctx, id)
 	if !exists {
 		time := time.Now().UTC()
-		err := sp.storage.Create(ctx, id, SumpPumpObserved{
+		err := sp.storage.Create(ctx, id, SewagePumpingStationObserved{
 			ID:           id,
 			State:        msg.Stopwatch.State,
 			LastObserved: &time,
@@ -67,19 +72,22 @@ func (sp *sp) Handle(ctx context.Context, msg *events.FunctionUpdated, options .
 				return err
 			}
 		}
-	} else if exists {
-		spo := SumpPumpObserved{}
 
-		spo, err := database.Get[SumpPumpObserved](ctx, sp.storage, id)
+	} else if exists {
+		spo := SewagePumpingStationObserved{}
+
+		spo, err := database.Get[SewagePumpingStationObserved](ctx, sp.storage, id)
 		if err != nil {
 			return err
 		}
 
-		//if it already does and state has not changed, update dateModified
+		//if it already does and state has not changed, update dateModified (false-false, true-true)
 
 		//if it already exists, and state has now changed create a new pumpbrunn/alert
+		// kolla om det finns en aktiv alert om nej skapa en ny alert
+		// om aktiv alert finns uppdatera alert och ta bort alertId på pumpbrunn - gäller true to false
 		if spo.State != msg.Stopwatch.State {
-			if spo.AlertID == "" {
+			if spo.ActiveAlert.State {
 				alert := Alert{
 					ID:        "generateAnAlertID",
 					Owner:     spo.ID,
@@ -90,7 +98,7 @@ func (sp *sp) Handle(ctx context.Context, msg *events.FunctionUpdated, options .
 
 				//TODO: send created alert on queue
 
-				spo.AlertID = alert.ID
+				spo.Alerts = alert.ID
 
 				sp.storage.Update(ctx, id, spo)
 			} else {
@@ -109,7 +117,7 @@ func (sp *sp) Handle(ctx context.Context, msg *events.FunctionUpdated, options .
 
 type Alert struct {
 	ID           string     `json:"id"`
-	Owner        string     `json:"owner"`
+	AlertSource  string     `json:"alertSource"`
 	State        bool       `json:"state"`
 	StartTime    *time.Time `json:"startTime"`
 	EndTime      *time.Time `json:"endTime,omitempty"`
