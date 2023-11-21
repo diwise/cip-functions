@@ -10,30 +10,30 @@ import (
 	"github.com/diwise/cip-functions/pkg/messaging/events"
 	"github.com/diwise/cip-functions/pkg/messaging/topics"
 	"github.com/diwise/messaging-golang/pkg/messaging"
+	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
 )
 
+const FunctionName string = "combinedsewageoverflow"
+
 type SewageOverflow struct {
-	storage database.Storage     `json:"-"`
-	msgCtx  messaging.MsgContext `json:"-"`
+	ID       string `json:"id"`
+	State    bool   `json:"state"`
+	Location Point  `json:"location"`
+	Tenant   string `json:"tenant"`
 }
 
-func New(s database.Storage, msgctx messaging.MsgContext) SewageOverflow {
-	return SewageOverflow{
-		storage: s,
-		msgCtx:  msgctx,
-	}
+func New() SewageOverflow {
+	return SewageOverflow{}
 }
 
 type SewageOverflowObserved struct {
-	ID          string     `json:"id"`
-	Count       int        `json:"count"`
-	Duration    *time.Time `json:"duration,omitempty"`
-	Description string     `json:"description"`
-	EndTime     *time.Time `json:"endTime,omitempty"`
-	Location    Point      `json:"location"`
-	State       bool       `json:"state"`
-	StartTime   *time.Time `json:"startTime"`
-	Timestamp   time.Time  `json:"timestamp"`
+	ID        string         `json:"id"`
+	Count     int32          `json:"count"`
+	Duration  *time.Duration `json:"duration,omitempty"`
+	EndTime   *time.Time     `json:"endTime,omitempty"`
+	State     bool           `json:"state"`
+	StartTime *time.Time     `json:"startTime"`
+	Timestamp time.Time      `json:"timestamp"`
 }
 
 type Point struct {
@@ -41,30 +41,81 @@ type Point struct {
 	Lon float64 `json:"lon"`
 }
 
-func (s *SewageOverflow) Handle(ctx context.Context, msg *events.FunctionUpdated, options ...options.Option) error {
-	id := fmt.Sprintf("SewageOverflowObserved:%s", msg.ID) // TODO: better ID generation
+func (s *SewageOverflow) Handle(ctx context.Context, msg *events.FunctionUpdated, storage database.Storage, msgCtx messaging.MsgContext, opts ...options.Option) error {
+	var err error
 
-	exists := s.storage.Exists(ctx, id)
-	if !exists {
-		s.storage.Create(ctx, id, SewageOverflowObserved{
-			ID: id,
-			// TODO add more fields
-		})
+	log := logging.GetFromContext(ctx)
+
+	if msg.Type != "stopwatch" && msg.SubType != "overflow" {
+		log.Info("invalid function type", "id", msg.ID, "type", msg.Type, "sub_type", msg.SubType)
+		return nil
 	}
 
-	// TODO: publish events to message broker
-	return nil
+	current, err := database.GetOrDefault[SewageOverflow](ctx, storage, msg.ID, SewageOverflow{
+		ID:    msg.ID,
+		State: false,
+		Location: Point{
+			Lat: msg.Location.Latitude,
+			Lon: msg.Location.Longitude,
+		},
+		Tenant: msg.Tenant,
+	})
+	if err != nil {
+		return err
+	}
+
+	if current.State != msg.Stopwatch.State {
+		current.State = msg.Stopwatch.State
+
+		id := fmt.Sprintf("sewageoverflowobserved:%s:%d", msg.ID, msg.Stopwatch.StartTime.Unix())
+		observation, err := database.GetOrDefault[SewageOverflowObserved](ctx, storage, id, SewageOverflowObserved{})
+		if err != nil {
+			return err
+		}
+
+		if msg.Stopwatch.State {
+			observation = SewageOverflowObserved{
+				ID:        id,
+				Count:     msg.Stopwatch.Count,
+				Duration:  msg.Stopwatch.Duration,
+				State:     msg.Stopwatch.State,
+				StartTime: &msg.Stopwatch.StartTime,
+				Timestamp: time.Now().UTC(),
+			}
+
+			err = storage.Create(ctx, observation.ID, observation)
+			if err != nil {
+				return err
+			}
+		} else {
+			if observation.EndTime != nil {
+				return fmt.Errorf("observation already ended")
+			}
+
+			observation.Duration = msg.Stopwatch.Duration
+			observation.EndTime = msg.Stopwatch.StopTime
+			observation.State = msg.Stopwatch.State
+			observation.Timestamp = time.Now().UTC()
+
+			err = storage.Update(ctx, observation.ID, observation)
+			if err != nil {
+				return err
+			}
+		}
+
+		err = msgCtx.PublishOnTopic(ctx, observation)
+		if err != nil {
+			return err
+		}
+	}
+
+	return database.CreateOrUpdate[SewageOverflow](ctx, storage, current.ID, current)
 }
 
-type SewageOverflowObservedStarted struct {
-	ID        string    `json:"id"`
-	Timestamp time.Time `json:"timestamp"`
-}
-
-func (s SewageOverflowObservedStarted) TopicName() string {
+func (s SewageOverflowObserved) TopicName() string {
 	return topics.CipFunctionsUpdated
 }
 
-func (s SewageOverflowObservedStarted) ContentType() string {
-	return "application/vnd+diwise.sewageoverflowobservedstarted+json"
+func (s SewageOverflowObserved) ContentType() string {
+	return "application/vnd+diwise.sewageoverflowobserved+json"
 }

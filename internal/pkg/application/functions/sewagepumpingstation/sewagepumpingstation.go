@@ -13,19 +13,14 @@ import (
 )
 
 type SewagePumpingStation interface {
-	Handle(ctx context.Context, msg *events.FunctionUpdated, options ...options.Option) error
+	Handle(ctx context.Context, msg *events.FunctionUpdated, storage database.Storage, msgCtx messaging.MsgContext, opts ...options.Option) error
 }
 
 type sp struct {
-	storage database.Storage
-	msgCtx  messaging.MsgContext
 }
 
-func New(storage database.Storage, msgCtx messaging.MsgContext) SewagePumpingStation {
-	sp := &sp{
-		storage: storage,
-		msgCtx:  msgCtx,
-	}
+func New() SewagePumpingStation {
+	sp := &sp{}
 
 	return sp
 }
@@ -42,15 +37,15 @@ type SewagePumpingStationObserved struct {
 	LastObserved   *time.Time `json:"lastObserved"`
 }
 
-func (sp *sp) Handle(ctx context.Context, msg *events.FunctionUpdated, options ...options.Option) error {
+func (sp *sp) Handle(ctx context.Context, msg *events.FunctionUpdated, storage database.Storage, msgCtx messaging.MsgContext, opts ...options.Option) error {
 	//generate ID
 	id := fmt.Sprintf("SewagePumpingStationObserved:%s", msg.ID)
 
 	//check if it already exists in database
-	exists := sp.storage.Exists(ctx, id)
+	exists := storage.Exists(ctx, id)
 	if !exists {
 		time := time.Now().UTC()
-		err := sp.storage.Create(ctx, id, SewagePumpingStationObserved{
+		err := storage.Create(ctx, id, SewagePumpingStationObserved{
 			ID:           id,
 			State:        msg.Stopwatch.State,
 			LastObserved: &time,
@@ -61,7 +56,7 @@ func (sp *sp) Handle(ctx context.Context, msg *events.FunctionUpdated, options .
 
 		if msg.Stopwatch.State {
 			alertID := fmt.Sprintf("Alert:alertID:%s", id) //TODO: better ID generation
-			err = sp.storage.Create(ctx, fmt.Sprintf("%s:alert:", id), Alert{
+			err = storage.Create(ctx, fmt.Sprintf("%s:alert:", id), Alert{
 				ID:        alertID,
 				State:     msg.Stopwatch.State,
 				StartTime: &msg.Stopwatch.StartTime,
@@ -71,10 +66,7 @@ func (sp *sp) Handle(ctx context.Context, msg *events.FunctionUpdated, options .
 			}
 		}
 
-	} else if exists {
-		spo := SewagePumpingStationObserved{}
-
-		spo, err := database.Get[SewagePumpingStationObserved](ctx, sp.storage, id)
+		spo, err := database.Get[SewagePumpingStationObserved](ctx, storage, id)
 		if err != nil {
 			return err
 		}
@@ -92,28 +84,28 @@ func (sp *sp) Handle(ctx context.Context, msg *events.FunctionUpdated, options .
 					State:       msg.Stopwatch.State,
 					StartTime:   &msg.Stopwatch.StartTime,
 				}
-				sp.storage.Create(ctx, id, alert)
+				storage.Create(ctx, id, alert)
 
 				spo.ActiveAlert.AlertID = alert.ID
 				spo.LastObserved = alert.StartTime
 
-				sp.storage.Update(ctx, id, spo)
+				storage.Update(ctx, id, spo)
 				//TODO: send created alert on queue
 
 			} else { // Om alertId finns, dvs alert finns, stänga alerten
 				alert := Alert{}
-				alert, err = database.Get[Alert](ctx, sp.storage, id)
+				alert, err = database.Get[Alert](ctx, storage, id)
 				if err != nil {
 					return err
 				}
 				alert.State = msg.Stopwatch.State
-				alert.StartTime = &msg.Stopwatch.StopTime
+				alert.StartTime = msg.Stopwatch.StopTime
 				spo.PreviousAlerts = append(spo.PreviousAlerts, alert.ID)
 				spo.ActiveAlert.AlertID = ""
 
 				//update existing alert with new timestamp and/or endTime
 				//spo.LastObserved = msg.LastObserved or something like that.
-				sp.storage.Update(ctx, id, spo)
+				storage.Update(ctx, id, spo)
 			}
 		} else {
 			//if state is the same, but there IS an active alert, update lastObserved

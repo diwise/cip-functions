@@ -17,11 +17,16 @@ type FunctionUpdated struct {
 	Timer        timers.Timer                `json:"timer,omitempty"`
 	WaterQuality waterqualities.WaterQuality `json:"waterquality,omitempty"`
 	Building     buildings.Building          `json:"building,omitempty"`
-	AirQuality   airquality.AirQuality       `json:"AirQuality,omitempty"`*/
+	AirQuality   airquality.AirQuality       `json:"AirQuality,omitempty"`
+	Stopwatch Stopwatch `json:"Stopwatch,omitempty"` */
+
 	Stopwatch struct {
-		State     bool      `json:"state"`
-		StartTime time.Time `json:"startTime"`
-		StopTime  time.Time `json:"stopTime,omitempty"`
+		Count          int32          `json:"count"`
+		CumulativeTime time.Duration  `json:"cumulativeTime"`
+		Duration       *time.Duration `json:"duration,omitempty"`
+		StartTime      time.Time      `json:"startTime"`
+		State          bool           `json:"state"`
+		StopTime       *time.Time     `json:"stopTime,omitempty"`
 	} `json:"Stopwatch,omitempty"`
 }
 
