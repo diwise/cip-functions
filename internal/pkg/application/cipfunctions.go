@@ -2,9 +2,9 @@ package application
 
 import (
 	"context"
+	"errors"
 
 	"github.com/diwise/cip-functions/internal/pkg/application/functions"
-	"github.com/diwise/cip-functions/internal/pkg/application/functions/combinedsewageoverflow"
 	"github.com/diwise/cip-functions/internal/pkg/infrastructure/database"
 	"github.com/diwise/cip-functions/pkg/messaging/events"
 	"github.com/diwise/messaging-golang/pkg/messaging"
@@ -33,27 +33,20 @@ func New(s database.Storage, m messaging.MsgContext, r functions.Registry) App {
 func (a *app) FunctionUpdated(ctx context.Context, msg events.FunctionUpdated) error {
 	log := logging.GetFromContext(ctx)
 
-	//TODO: get function from registry and call Handle on it
-
 	registryItems, err := a.fnRegistry.Find(ctx, functions.FindByFunctionID(msg.ID))
 	if err != nil {
 		return err
 	}
 
+	var errs []error
+
 	for _, item := range registryItems {
-		switch item.Type {
-		case combinedsewageoverflow.FunctionName:
-			// TODO: exec in goroutine?
-			cso := combinedsewageoverflow.New(a.storage, a.msgCtx)
-			err := cso.Handle(ctx, &msg, item.Options...)
-			if err != nil {
-				// TODO: log error and continue?
-				return err
-			}
-		default:
-			log.Debug("unknown function", "name", item.Type)
+		err := item.Fn.Handle(ctx, &msg, a.storage, a.msgCtx, item.Options...)
+		if err != nil {
+			log.Error("failed to handle message", "function_id", item.FnID, "type", item.Type, "err", err.Error())
+			errs = append(errs, err)
 		}
 	}
 
-	return nil
+	return errors.Join(errs...)
 }

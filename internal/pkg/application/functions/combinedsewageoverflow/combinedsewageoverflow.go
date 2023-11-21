@@ -15,16 +15,11 @@ import (
 const FunctionName string = "combinedsewageoverflow"
 
 type SewageOverflow struct {
-	storage database.Storage
-	msgCtx  messaging.MsgContext
 	current SewageOverflowObserved
 }
 
-func New(s database.Storage, msgctx messaging.MsgContext) SewageOverflow {
-	return SewageOverflow{
-		storage: s,
-		msgCtx:  msgctx,
-	}
+func New() SewageOverflow {
+	return SewageOverflow{}
 }
 
 type SewageOverflowObserved struct {
@@ -42,9 +37,9 @@ type Point struct {
 	Lon float64 `json:"lon"`
 }
 
-func (s *SewageOverflow) Handle(ctx context.Context, msg *events.FunctionUpdated, opts ...options.Option) error {
+func (s *SewageOverflow) Handle(ctx context.Context, msg *events.FunctionUpdated, storage database.Storage, msgCtx messaging.MsgContext, opts ...options.Option) error {
 	var err error
-	
+
 	sufix, ok := options.Exists(opts, "cipID") // TODO: add constant
 	if !ok {
 		sufix = msg.ID
@@ -52,7 +47,7 @@ func (s *SewageOverflow) Handle(ctx context.Context, msg *events.FunctionUpdated
 
 	id := fmt.Sprintf("SewageOverflowObserved:%s", sufix)
 
-	exists := s.storage.Exists(ctx, id)
+	exists := storage.Exists(ctx, id)
 	if !exists {
 		s.current = SewageOverflowObserved{
 			ID:        id,
@@ -63,13 +58,13 @@ func (s *SewageOverflow) Handle(ctx context.Context, msg *events.FunctionUpdated
 			Timestamp: time.Now().UTC(),
 		}
 	} else {
-		s.current, err = database.Get[SewageOverflowObserved](ctx, s.storage, id)
+		s.current, err = database.Get[SewageOverflowObserved](ctx, storage, id)
 		if err != nil {
 			return err
 		}
 	}
 
-	return s.msgCtx.PublishOnTopic(ctx, s.current)
+	return msgCtx.PublishOnTopic(ctx, s.current)
 }
 
 func (s SewageOverflowObserved) TopicName() string {

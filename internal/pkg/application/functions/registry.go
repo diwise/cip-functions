@@ -8,27 +8,8 @@ import (
 
 	"github.com/diwise/cip-functions/internal/pkg/application/functions/combinedsewageoverflow"
 	"github.com/diwise/cip-functions/internal/pkg/application/functions/options"
-	"github.com/diwise/cip-functions/internal/pkg/infrastructure/database"
-	"github.com/diwise/messaging-golang/pkg/messaging"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
 )
-
-type Fnct interface {
-	ID() string
-}
-
-type fnctImpl struct {
-	id string
-	storage database.Storage
-	msgCtx  messaging.MsgContext
-
-	SewageOverflow combinedsewageoverflow.SewageOverflow
-}
-
-func (fn *fnctImpl) ID() string {
-	return fn.id
-}
-
 
 //go:generate moq -rm -out registry_mock.go . Registry
 type Registry interface {
@@ -42,6 +23,7 @@ type registry struct {
 type RegistryItem struct {
 	FnID    string
 	Type    string
+	Fn      Fn
 	Options []options.Option
 }
 
@@ -68,6 +50,17 @@ func NewRegistry(ctx context.Context, input io.Reader) (Registry, error) {
 		}
 
 		item := rowToRegistryItem(row)
+		fn := fnImpl{
+			ID_:   item.FnID,
+			Type_: item.Type,
+		}
+
+		switch item.Type {
+		case combinedsewageoverflow.FunctionName:
+			fn.SewageOverflow = combinedsewageoverflow.New()
+			fn.handle = fn.SewageOverflow.Handle
+			item.Fn = &fn
+		}
 		reg.items[item.FnID] = item
 
 		n++
