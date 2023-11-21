@@ -33,15 +33,13 @@ func New(storage database.Storage, msgCtx messaging.MsgContext) SewagePumpingSta
 type SewagePumpingStationObserved struct {
 	ID          string `json:"id"`
 	ActiveAlert struct {
-		State     bool       `json:"state"`
-		AlertID   string     `json:"alertId,omitempty"`
-		Timestamp *time.Time `json:"timestamp,omitempty"`
+		AlertID string `json:"alertId,omitempty"`
 	} `json:"activeAlert,omitempty"`
-	Alerts       []string   `json:"alerts,omitempty"`
-	State        bool       `json:"state"`
-	StartTime    *time.Time `json:"startTime,omitempty"`
-	EndTime      *time.Time `json:"endTime,omitempty"`
-	LastObserved *time.Time `json:"lastObserved"`
+	PreviousAlerts []string   `json:"previousAlerts,omitempty"`
+	State          bool       `json:"state"`
+	StartTime      *time.Time `json:"startTime,omitempty"`
+	EndTime        *time.Time `json:"endTime,omitempty"`
+	LastObserved   *time.Time `json:"lastObserved"`
 }
 
 func (sp *sp) Handle(ctx context.Context, msg *events.FunctionUpdated, options ...options.Option) error {
@@ -87,21 +85,32 @@ func (sp *sp) Handle(ctx context.Context, msg *events.FunctionUpdated, options .
 		// kolla om det finns en aktiv alert om nej skapa en ny alert
 		// om aktiv alert finns uppdatera alert och ta bort alertId på pumpbrunn - gäller true to false
 		if spo.State != msg.Stopwatch.State {
-			if spo.ActiveAlert.State {
+			if spo.ActiveAlert.AlertID == "" {
 				alert := Alert{
-					ID:        "generateAnAlertID",
-					Owner:     spo.ID,
-					State:     msg.Stopwatch.State,
-					StartTime: &msg.Stopwatch.StartTime,
+					ID:          "generateAnAlertID",
+					AlertSource: spo.ID,
+					State:       msg.Stopwatch.State,
+					StartTime:   &msg.Stopwatch.StartTime,
 				}
 				sp.storage.Create(ctx, id, alert)
 
-				//TODO: send created alert on queue
-
-				spo.Alerts = alert.ID
+				spo.ActiveAlert.AlertID = alert.ID
+				spo.LastObserved = alert.StartTime
 
 				sp.storage.Update(ctx, id, spo)
-			} else {
+				//TODO: send created alert on queue
+
+			} else { // Om alertId finns, dvs alert finns, stänga alerten
+				alert := Alert{}
+				alert, err = database.Get[Alert](ctx, sp.storage, id)
+				if err != nil {
+					return err
+				}
+				alert.State = msg.Stopwatch.State
+				alert.StartTime = &msg.Stopwatch.StopTime
+				spo.PreviousAlerts = append(spo.PreviousAlerts, alert.ID)
+				spo.ActiveAlert.AlertID = ""
+
 				//update existing alert with new timestamp and/or endTime
 				//spo.LastObserved = msg.LastObserved or something like that.
 				sp.storage.Update(ctx, id, spo)
