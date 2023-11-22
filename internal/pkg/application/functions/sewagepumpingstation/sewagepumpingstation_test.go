@@ -84,8 +84,11 @@ func TestSewagePumpingStationHandleChecksIfSetTheRightValuesInDatabase(t *testin
 	err := sp.Handle(context.Background(), &msg, dbMock, msgCtxMock)
 	is.NoErr(err)
 
+
 // Retrieve data from the database
 retrievedData, err := *database.Get()
+
+
 [SewagePumpingStationObserved](ctx, storage, id)
 if err != nil {
 	return err
