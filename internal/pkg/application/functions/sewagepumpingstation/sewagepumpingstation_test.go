@@ -1,6 +1,5 @@
 package sewagepumpingstation
 
-/*
 import (
 	"context"
 	"testing"
@@ -19,17 +18,21 @@ func TestSewagePumpingStationHandleCreatesNewIfIDDoesNotExist(t *testing.T) {
 		ID:   "fnID:003",
 		Type: "Stopwatch",
 		Stopwatch: struct {
-			State     bool      "json:\"state\""
-			StartTime time.Time "json:\"startTime\""
-			StopTime  time.Time "json:\"stopTime,omitempty\""
+			Count          int32          "json:\"count\""
+			CumulativeTime time.Duration  "json:\"cumulativeTime\""
+			Duration       *time.Duration "json:\"duration,omitempty\""
+			StartTime      time.Time      "json:\"startTime\""
+			State          bool           "json:\"state\""
+			StopTime       *time.Time     "json:\"stopTime,omitempty\""
 		}{
 			State:     false,
-			StartTime: time.Now().UTC(),
+			StartTime: time.Now(),
 		},
+		Timestamp: time.Now(),
 	}
 
-	sp := New(dbMock, msgCtxMock)
-	err := sp.Handle(context.Background(), &msg)
+	sp := New()
+	err := sp.Handle(context.Background(), &msg, dbMock, msgCtxMock)
 
 	is.NoErr(err)
 	is.True(len(dbMock.CreateCalls()) == 1)
@@ -42,29 +45,34 @@ func TestSewagePumpingStationHandleChecksIfStateUpdatedOnExisting(t *testing.T) 
 		ID:   "fnID:004",
 		Type: "Stopwatch",
 		Stopwatch: struct {
-			State     bool      "json:\"state\""
-			StartTime time.Time "json:\"startTime\""
-			StopTime  time.Time "json:\"stopTime,omitempty\""
+			Count          int32          "json:\"count\""
+			CumulativeTime time.Duration  "json:\"cumulativeTime\""
+			Duration       *time.Duration "json:\"duration,omitempty\""
+			StartTime      time.Time      "json:\"startTime\""
+			State          bool           "json:\"state\""
+			StopTime       *time.Time     "json:\"stopTime,omitempty\""
 		}{
 			State:     false,
-			StartTime: time.Now().UTC(),
+			StartTime: time.Now(),
 		},
+		Timestamp: time.Now(),
 	}
 
 	//create new entry first time around
-	sp := New(dbMock, msgCtxMock)
-	err := sp.Handle(context.Background(), &msg)
+	sp := New()
+	err := sp.Handle(context.Background(), &msg, dbMock, msgCtxMock)
 	is.NoErr(err)
 
 	//update value on state
 	msg.Stopwatch.State = true
 
 	//call New and Handle again with new value
-	sp2 := New(dbMock, msgCtxMock)
-	err = sp2.Handle(context.Background(), &msg)
+	sp2 := New()
+	err = sp2.Handle(context.Background(), &msg, dbMock, msgCtxMock)
 
 	is.NoErr(err)
-	is.True(len(dbMock.UpdateCalls()) == 1)
+	is.True(len(dbMock.CreateCalls()) == 1)
+	is.True(len(dbMock.UpdateCalls()) == 2)
 }
 
 func testSetup(t *testing.T) (*is.I, *database.StorageMock, *messaging.MsgContextMock) {
@@ -86,9 +94,9 @@ func testSetup(t *testing.T) (*is.I, *database.StorageMock, *messaging.MsgContex
 		},
 		SelectFunc: func(ctx context.Context, id string) (any, error) {
 			return SewagePumpingStationObserved{
-				ID:      "SewagePumpingStationObserved:fnID:004",
-				AlertID: "",
-				State:   false,
+				ID:          "SewagePumpingStationObserved:fnID:004",
+				ActiveAlert: "",
+				State:       false,
 			}, nil
 		},
 	}
@@ -97,4 +105,3 @@ func testSetup(t *testing.T) (*is.I, *database.StorageMock, *messaging.MsgContex
 
 	return is, dbMock, msgCtxMock
 }
-*/
