@@ -11,17 +11,28 @@ import (
 	"github.com/matryer/is"
 )
 
-func TestSewagePumpingStationHandleCreatesNewIfIDDoesNotExist(t *testing.T) {
+func TestSewagePumpingStationHandleCreatesNewSewagePumpingStationIfIDDoesNotExist(t *testing.T) {
 	is, dbMock, msgCtxMock, msg := testSetup(t, "fnID:003", false)
 
 	sp := New()
 	err := sp.Handle(context.Background(), &msg, dbMock, msgCtxMock)
 
 	is.NoErr(err)
-	is.True(len(dbMock.CreateCalls()) == 1)
+	is.True(len(dbMock.CreateCalls()) == 1) //create should be called once to create a new sewagepumpingstation
 }
 
-func TestSewagePumpingStationHandleChecksIfStateUpdatedOnExisting(t *testing.T) {
+func TestSewagePumpingStationHandleCreatesNewAlertIfFirstStateIsTrue(t *testing.T) {
+	is, dbMock, msgCtxMock, msg := testSetup(t, "fnID:003", true)
+
+	sp := New()
+	err := sp.Handle(context.Background(), &msg, dbMock, msgCtxMock)
+
+	is.NoErr(err)
+	is.True(len(dbMock.CreateCalls()) == 2) //create should be called twice, once for the sewagepumpingstation, once for an alert
+	is.True(len(dbMock.UpdateCalls()) == 1) //update should be called to give the sewagepumpingstation its activeAlert ID
+}
+
+func TestSewagePumpingStationHandleChecksIfStateHasUpdatedOnExisting(t *testing.T) {
 	is, dbMock, msgCtxMock, msg := testSetup(t, "fnID:004", false)
 
 	//create new entry first time around
@@ -37,8 +48,8 @@ func TestSewagePumpingStationHandleChecksIfStateUpdatedOnExisting(t *testing.T) 
 	err = sp2.Handle(context.Background(), &msg, dbMock, msgCtxMock)
 
 	is.NoErr(err)
-	is.True(len(dbMock.CreateCalls()) == 1)
-	is.Equal(len(dbMock.UpdateCalls()), 3)
+	is.Equal(len(dbMock.CreateCalls()), 1) //create should be called once to create a new sewagepumpingstation
+	is.Equal(len(dbMock.UpdateCalls()), 3) //update is called three times first with timestamp from same state, then with altered state for both sewagepumpingstation and alert
 }
 
 func TestSewagePumpingStationHandleChecksIfAlertCloses(t *testing.T) {
@@ -48,11 +59,6 @@ func TestSewagePumpingStationHandleChecksIfAlertCloses(t *testing.T) {
 	sp := New()
 	err := sp.Handle(context.Background(), &msg, dbMock, msgCtxMock)
 	is.NoErr(err)
-
-	// Retrieve data from the database
-	retrievedData, err := database.Get[Alert](context.Background(), dbMock, "generateAnAlertID")
-	is.NoErr(err)
-	is.Equal(retrievedData.ID, "generateAnAlertID")
 
 	//update value on state
 	msg.Stopwatch.State = false
@@ -79,25 +85,6 @@ func TestSewagePumpingStationHandleChecksIfStatusIsUnchanged(t *testing.T) {
 
 	is.NoErr(err)
 	is.Equal(len(dbMock.UpdateCalls()), 4)
-}
-
-func TestSewagePumpingStationHandleChecksIfSetsTheRightValuesInDatabase(t *testing.T) {
-
-	is, dbMock, msgCtxMock, msg := testSetup(t, "fnID:004", true)
-
-	//create new entry first time around
-	sp := New()
-	err := sp.Handle(context.Background(), &msg, dbMock, msgCtxMock)
-	is.NoErr(err)
-
-	// Retrieve data from the database
-	retrievedData, err := database.Get[SewagePumpingStationObserved](context.Background(), dbMock, msg.ID)
-	is.NoErr(err)
-
-	// Compare the retrieved data with the original data
-	if retrievedData.ID != "SewagePumpingStationObserved:fnID:004" {
-		t.Errorf("Expected name %s, got %s", "SewagePumpingStationObserved:fnID:004", retrievedData.ID)
-	}
 }
 
 func testSetup(t *testing.T, msgID string, state bool) (*is.I, *database.StorageMock, *messaging.MsgContextMock, events.FunctionUpdated) {

@@ -43,7 +43,6 @@ func (sp *sp) Handle(ctx context.Context, msg *events.FunctionUpdated, storage d
 	//generate ID
 	id := fmt.Sprintf("SewagePumpingStationObserved:%s", msg.ID)
 
-	//check if it already exists in database
 	exists := storage.Exists(ctx, id)
 	if !exists {
 		time := time.Now().UTC()
@@ -60,6 +59,7 @@ func (sp *sp) Handle(ctx context.Context, msg *events.FunctionUpdated, storage d
 		if err != nil {
 			return err
 		}
+		//TODO: send sewagepumpingstation on queue
 
 		if msg.Stopwatch.State {
 			alertID := fmt.Sprintf("Alert:alertID:%s", id) //TODO: better ID generation
@@ -71,6 +71,7 @@ func (sp *sp) Handle(ctx context.Context, msg *events.FunctionUpdated, storage d
 			if err != nil {
 				return err
 			}
+			//TODO: send created alert on queue
 
 			spo, err := database.Get[SewagePumpingStationObserved](ctx, storage, id)
 			if err != nil {
@@ -80,16 +81,14 @@ func (sp *sp) Handle(ctx context.Context, msg *events.FunctionUpdated, storage d
 			spo.ActiveAlert.ID = alertID
 
 			storage.Update(ctx, id, spo)
+			//TODO: send updated sewagepumpingstation on queue
 		}
 	} else {
 		spo, err := database.Get[SewagePumpingStationObserved](ctx, storage, id)
 		if err != nil {
 			return err
 		}
-		// om sparat state inte är samma som inkommande state
-
 		if spo.ActiveAlert.State != msg.Stopwatch.State {
-			//ingen aktiv alert sen tidigare, det som kommer in är true, gör en ny alert
 			if msg.Stopwatch.State {
 				alert := Alert{
 					ID:          "generateAnAlertID",
@@ -98,14 +97,15 @@ func (sp *sp) Handle(ctx context.Context, msg *events.FunctionUpdated, storage d
 					StartTime:   &msg.Stopwatch.StartTime,
 				}
 				storage.Create(ctx, id, alert)
+				//TODO: send updated alert on queue
 
 				spo.ActiveAlert.ID = alert.ID
 				spo.LastObserved = alert.StartTime
 
 				storage.Update(ctx, id, spo)
-				//TODO: send created alert on queue
+				//TODO: send update alert on queue
 
-			} else { // Om alertId finns, dvs alert finns, stänga alerten
+			} else {
 				alert, err := database.Get[Alert](ctx, storage, id)
 				if err != nil {
 					return err
@@ -114,6 +114,7 @@ func (sp *sp) Handle(ctx context.Context, msg *events.FunctionUpdated, storage d
 				alert.EndTime = msg.Stopwatch.StopTime
 
 				storage.Update(ctx, alert.ID, alert)
+				//TODO: send updated alert on queue
 
 				spo.PreviousAlerts = append(spo.PreviousAlerts, alert.ID)
 				spo.ActiveAlert.State = msg.Stopwatch.State
@@ -121,8 +122,9 @@ func (sp *sp) Handle(ctx context.Context, msg *events.FunctionUpdated, storage d
 				spo.LastObserved = &msg.Timestamp
 
 				storage.Update(ctx, id, spo)
+				//TODO: send updated alert on queue
 			}
-		} else {
+		} else if spo.ActiveAlert.State == msg.Stopwatch.State {
 			if storage.Exists(ctx, spo.ActiveAlert.ID) {
 				alert, err := database.Get[Alert](ctx, storage, id)
 				if err != nil {
@@ -131,13 +133,13 @@ func (sp *sp) Handle(ctx context.Context, msg *events.FunctionUpdated, storage d
 
 				alert.LastObserved = &msg.Timestamp
 				storage.Update(ctx, id, alert)
+				//TODO: send updated alert on queue
 
 			}
 			spo.LastObserved = &msg.Timestamp
 			storage.Update(ctx, id, spo)
-
+			//TODO: send updated alert on queue
 		}
-		//post message to cip-functions.updated
 	}
 
 	return nil
