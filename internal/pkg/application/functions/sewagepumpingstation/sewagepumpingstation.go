@@ -65,18 +65,14 @@ func (sp *sp) Handle(ctx context.Context, msg *events.FunctionUpdated, storage d
 				return err
 			}
 		}
-
+	} else {
 		spo, err := database.Get[SewagePumpingStationObserved](ctx, storage, id)
 		if err != nil {
 			return err
 		}
-
-		//if it already does and state has not changed, update dateModified (false-false, true-true)
-
-		//if it already exists, and state has now changed create a new pumpbrunn/alert
-		// kolla om det finns en aktiv alert om nej skapa en ny alert
-		// om aktiv alert finns uppdatera alert och ta bort alertId på pumpbrunn - gäller true to false
+		// om sparat state inte är samma som inkommande state
 		if spo.State != msg.Stopwatch.State {
+			//ingen aktiv alert sen tidigare, det som kommer in är true, gör en ny alert
 			if spo.ActiveAlert == "" {
 				alert := Alert{
 					ID:          "generateAnAlertID",
@@ -99,15 +95,31 @@ func (sp *sp) Handle(ctx context.Context, msg *events.FunctionUpdated, storage d
 				}
 				alert.State = msg.Stopwatch.State
 				alert.EndTime = msg.Stopwatch.StopTime
+
+				storage.Update(ctx, alert.ID, alert)
+
 				spo.PreviousAlerts = append(spo.PreviousAlerts, alert.ID)
 				spo.ActiveAlert = ""
 
 				storage.Update(ctx, id, spo)
 			}
 		} else {
-			//if state is the same, but there IS an active alert, update lastObserved
-			//post message to cip-functions.updated
+			if spo.State == msg.Stopwatch.State {
+				if spo.ActiveAlert != "" {
+					alert, err := database.Get[Alert](ctx, storage, id)
+					if err != nil {
+						return err
+					}
+
+					alert.LastObserved = &msg.Timestamp
+					storage.Update(ctx, id, alert)
+
+				}
+				spo.LastObserved = &msg.Timestamp
+				storage.Update(ctx, id, spo)
+			}
 		}
+		//post message to cip-functions.updated
 	}
 
 	return nil
