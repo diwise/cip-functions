@@ -60,6 +60,53 @@ func TestSewagePumpingStationHandleChecksIfAlertCloses(t *testing.T) {
 	is.Equal(len(dbMock.UpdateCalls()), 4)
 }
 
+func TestSewagePumpingStationHandleChecksIfStatusIsUnchanged(t *testing.T) {
+	is, dbMock, msgCtxMock, msg := testSetup(t, "fnID:004", true)
+
+	//create new entry first time around
+	sp := New()
+	err := sp.Handle(context.Background(), &msg, dbMock, msgCtxMock)
+	is.NoErr(err)
+
+	//call New and Handle again with new value
+	sp2 := New()
+	err = sp2.Handle(context.Background(), &msg, dbMock, msgCtxMock)
+
+	is.NoErr(err)
+	is.Equal(len(dbMock.UpdateCalls()), 4)
+}
+
+func TestSewagePumpingStationHandleChecksIfSetTheRightValuesInDatabase(t *testing.T) {
+	is, dbMock, msgCtxMock, msg := testSetup(t, "fnID:004", true)
+
+	//create new entry first time around
+	sp := New()
+	err := sp.Handle(context.Background(), &msg, dbMock, msgCtxMock)
+	is.NoErr(err)
+
+// Retrieve data from the database
+retrievedData, err := *database.Get()
+[SewagePumpingStationObserved](ctx, storage, id)
+if err != nil {
+	return err
+}
+if err != nil {
+	t.Fatalf("Failed to retrieve data from the database: %v", err)
+}
+
+
+// Compare the retrieved data with the original data
+if retrievedData.Name != testData.Name {
+	t.Errorf("Expected name %s, got %s", testData.Name, retrievedData.Name)
+}
+
+// Add other checks for additional fields if needed
+
+fmt.Println("Test passed!")
+}
+
+
+
 func testSetup(t *testing.T, msgID string, state bool) (*is.I, *database.StorageMock, *messaging.MsgContextMock, events.FunctionUpdated) {
 	is := is.New(t)
 
