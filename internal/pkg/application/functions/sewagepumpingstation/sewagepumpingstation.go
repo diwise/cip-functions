@@ -28,10 +28,12 @@ func New() SewagePumpingStation {
 }
 
 type SewagePumpingStationObserved struct {
-	ID             string     `json:"id"`
-	ActiveAlert    string     `json:"activeAlert,omitempty"`
+	ID          string `json:"id"`
+	ActiveAlert struct {
+		State bool   `json:"state"`
+		ID    string `json:"alertID,omitempty"`
+	} `json:"activeAlert,omitempty"`
 	PreviousAlerts []string   `json:"previousAlerts,omitempty"`
-	State          bool       `json:"state"`
 	StartTime      *time.Time `json:"startTime,omitempty"`
 	EndTime        *time.Time `json:"endTime,omitempty"`
 	LastObserved   *time.Time `json:"lastObserved"`
@@ -46,8 +48,13 @@ func (sp *sp) Handle(ctx context.Context, msg *events.FunctionUpdated, storage d
 	if !exists {
 		time := time.Now().UTC()
 		err := storage.Create(ctx, id, SewagePumpingStationObserved{
-			ID:           id,
-			State:        msg.Stopwatch.State,
+			ID: id,
+			ActiveAlert: struct {
+				State bool   "json:\"state\""
+				ID    string "json:\"alertID,omitempty\""
+			}{
+				State: msg.Stopwatch.State,
+			},
 			LastObserved: &time,
 		})
 		if err != nil {
@@ -64,6 +71,15 @@ func (sp *sp) Handle(ctx context.Context, msg *events.FunctionUpdated, storage d
 			if err != nil {
 				return err
 			}
+
+			spo, err := database.Get[SewagePumpingStationObserved](ctx, storage, id)
+			if err != nil {
+				return err
+			}
+
+			spo.ActiveAlert.ID = alertID
+
+			storage.Update(ctx, id, spo)
 		}
 	} else {
 		spo, err := database.Get[SewagePumpingStationObserved](ctx, storage, id)
@@ -71,9 +87,10 @@ func (sp *sp) Handle(ctx context.Context, msg *events.FunctionUpdated, storage d
 			return err
 		}
 		// om sparat state inte är samma som inkommande state
-		if spo.State != msg.Stopwatch.State {
+
+		if spo.ActiveAlert.State != msg.Stopwatch.State {
 			//ingen aktiv alert sen tidigare, det som kommer in är true, gör en ny alert
-			if spo.ActiveAlert == "" {
+			if msg.Stopwatch.State {
 				alert := Alert{
 					ID:          "generateAnAlertID",
 					AlertSource: spo.ID,
@@ -82,7 +99,7 @@ func (sp *sp) Handle(ctx context.Context, msg *events.FunctionUpdated, storage d
 				}
 				storage.Create(ctx, id, alert)
 
-				spo.ActiveAlert = alert.ID
+				spo.ActiveAlert.ID = alert.ID
 				spo.LastObserved = alert.StartTime
 
 				storage.Update(ctx, id, spo)
@@ -99,25 +116,26 @@ func (sp *sp) Handle(ctx context.Context, msg *events.FunctionUpdated, storage d
 				storage.Update(ctx, alert.ID, alert)
 
 				spo.PreviousAlerts = append(spo.PreviousAlerts, alert.ID)
-				spo.ActiveAlert = ""
+				spo.ActiveAlert.State = msg.Stopwatch.State
+				spo.ActiveAlert.ID = ""
+				spo.LastObserved = &msg.Timestamp
 
 				storage.Update(ctx, id, spo)
 			}
 		} else {
-			if spo.State == msg.Stopwatch.State {
-				if spo.ActiveAlert != "" {
-					alert, err := database.Get[Alert](ctx, storage, id)
-					if err != nil {
-						return err
-					}
-
-					alert.LastObserved = &msg.Timestamp
-					storage.Update(ctx, id, alert)
-
+			if storage.Exists(ctx, spo.ActiveAlert.ID) {
+				alert, err := database.Get[Alert](ctx, storage, id)
+				if err != nil {
+					return err
 				}
-				spo.LastObserved = &msg.Timestamp
-				storage.Update(ctx, id, spo)
+
+				alert.LastObserved = &msg.Timestamp
+				storage.Update(ctx, id, alert)
+
 			}
+			spo.LastObserved = &msg.Timestamp
+			storage.Update(ctx, id, spo)
+
 		}
 		//post message to cip-functions.updated
 	}
