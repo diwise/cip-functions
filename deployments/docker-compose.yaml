@@ -1,0 +1,33 @@
+version: '3'
+services:
+  
+  timescale:
+    image: timescale/timescaledb:latest-pg14
+    restart: always
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U diwise" ]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    environment:
+      POSTGRES_USER: 'diwise'
+      POSTGRES_PASSWORD: 'diwise'
+      POSTGRES_DB: 'diwise'      
+      POSTGRES_HOST_AUTH_METHOD: 'trust'
+    ports:
+      - '5432:5432'
+
+  pgadmin:
+    image: dpage/pgadmin4:7.3
+    restart: always
+    ports:
+      - "5050:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@diwise.io
+      PGADMIN_DEFAULT_PASSWORD: password
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin      
+       
+volumes:
+  pgadmin-data: ~        
