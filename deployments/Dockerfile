@@ -20,7 +20,7 @@ FROM registry.access.redhat.com/ubi9/ubi-minimal
 WORKDIR /opt/diwise
 
 COPY --from=builder --chown=1001 /app/cmd/cip-functions/cip-functions /opt/diwise
-COPY --chown=1001 assets/config/functions.csv /opt/diwise/config/functions.csv
+COPY --chown=1001 assets/config/cip-functions.csv /opt/diwise/config/cip-functions.csv
 
 RUN chown 1001 /opt/diwise
 
