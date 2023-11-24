@@ -31,7 +31,7 @@ func main() {
 	ctx, _, cleanup := o11y.Init(context.Background(), serviceName, serviceVersion)
 	defer cleanup()
 
-	flag.StringVar(&functionsConfigPath, "functions", "/opt/diwise/config/functions.csv", "configuration file for functions")
+	flag.StringVar(&functionsConfigPath, "functions", "/opt/diwise/config/cip-functions.csv", "configuration file for functions")
 	flag.Parse()
 
 	var err error
