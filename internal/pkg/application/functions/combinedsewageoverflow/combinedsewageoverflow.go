@@ -67,6 +67,8 @@ func (s *SewageOverflow) Handle(ctx context.Context, msg *events.FunctionUpdated
 	if current.State != msg.Stopwatch.State {
 		current.State = msg.Stopwatch.State
 
+		log.Debug("state changed", "id", msg.ID, "state", msg.Stopwatch.State)
+
 		id := fmt.Sprintf("sewageoverflowobserved:%s:%d", msg.ID, msg.Stopwatch.StartTime.Unix())
 		observation, err := database.GetOrDefault[SewageOverflowObserved](ctx, storage, id, SewageOverflowObserved{})
 		if err != nil {
@@ -74,6 +76,8 @@ func (s *SewageOverflow) Handle(ctx context.Context, msg *events.FunctionUpdated
 		}
 
 		if msg.Stopwatch.State {
+			log.Debug("overflow started", "id", id, "state", msg.Stopwatch.State)
+
 			observation = SewageOverflowObserved{
 				ID:        id,
 				Count:     msg.Stopwatch.Count,
@@ -89,8 +93,12 @@ func (s *SewageOverflow) Handle(ctx context.Context, msg *events.FunctionUpdated
 			}
 		} else {
 			if observation.EndTime != nil {
-				return fmt.Errorf("observation already ended")
+				err = fmt.Errorf("observation already ended at %s", observation.EndTime.String())
+				log.Error("could not be ended", "id", id, "err", err.Error())
+				return err
 			}
+
+			log.Debug("overflow ended", "id", id, "state", msg.Stopwatch.State)
 
 			observation.Duration = msg.Stopwatch.Duration
 			observation.EndTime = msg.Stopwatch.StopTime
@@ -107,6 +115,8 @@ func (s *SewageOverflow) Handle(ctx context.Context, msg *events.FunctionUpdated
 		if err != nil {
 			return err
 		}
+
+		log.Debug("published SewageOverflowObserved", "id", observation.ID)
 	}
 
 	return database.CreateOrUpdate[SewageOverflow](ctx, storage, current.ID, current)
