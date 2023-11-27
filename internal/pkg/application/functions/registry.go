@@ -8,7 +8,7 @@ import (
 
 	"github.com/diwise/cip-functions/internal/pkg/application/functions/combinedsewageoverflow"
 	"github.com/diwise/cip-functions/internal/pkg/application/functions/options"
-	"github.com/diwise/cip-functions/internal/pkg/application/functions/sumppump"
+	"github.com/diwise/cip-functions/internal/pkg/application/functions/sewagepumpingstation"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
 )
 
@@ -61,9 +61,9 @@ func NewRegistry(ctx context.Context, input io.Reader) (Registry, error) {
 			fn.SewageOverflow = combinedsewageoverflow.New()
 			fn.handle = fn.SewageOverflow.Handle
 			item.Fn = &fn
-		case sumppump.FunctionName:
-			fn.SumpPump = sumppump.New()
-			fn.handle = fn.SumpPump.Handle
+		case sewagepumpingstation.FunctionName:
+			fn.SewagePumpingStation = sewagepumpingstation.New()
+			fn.handle = fn.SewagePumpingStation.Handle
 			item.Fn = &fn
 		}
 		reg.items[item.FnID] = item
