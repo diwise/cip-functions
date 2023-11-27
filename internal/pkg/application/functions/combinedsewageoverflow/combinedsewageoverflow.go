@@ -52,8 +52,10 @@ func (s *SewageOverflow) Handle(ctx context.Context, msg *events.FunctionUpdated
 		return nil
 	}
 
-	current, err := database.GetOrDefault[SewageOverflow](ctx, storage, msg.ID, SewageOverflow{
-		ID:    msg.ID,
+	sewageOverflowID := fmt.Sprintf("sewageoverflow:%s", msg.ID)
+
+	current, err := database.GetOrDefault[SewageOverflow](ctx, storage, sewageOverflowID, SewageOverflow{
+		ID:    sewageOverflowID,
 		State: false,
 		Location: Point{
 			Lat: msg.Location.Latitude,
@@ -68,19 +70,19 @@ func (s *SewageOverflow) Handle(ctx context.Context, msg *events.FunctionUpdated
 	if current.State != msg.Stopwatch.State {
 		current.State = msg.Stopwatch.State
 
-		log.Debug("state changed", "id", msg.ID, "state", msg.Stopwatch.State)
+		log.Debug("state changed", "id", sewageOverflowID, "state", msg.Stopwatch.State)
 
-		id := fmt.Sprintf("sewageoverflowobserved:%s:%d", msg.ID, msg.Stopwatch.StartTime.Unix())
-		observation, err := database.GetOrDefault[SewageOverflowObserved](ctx, storage, id, SewageOverflowObserved{})
+		sewageOverflowObservedID := fmt.Sprintf("sewageoverflowobserved:%s:%d", msg.ID, msg.Stopwatch.StartTime.Unix())
+		observation, err := database.GetOrDefault[SewageOverflowObserved](ctx, storage, sewageOverflowObservedID, SewageOverflowObserved{})
 		if err != nil {
 			return err
 		}
 
 		if msg.Stopwatch.State {
-			log.Debug("overflow started", "id", id, "state", msg.Stopwatch.State)
+			log.Debug("overflow started", "id", sewageOverflowObservedID, "state", msg.Stopwatch.State)
 
 			observation = SewageOverflowObserved{
-				ID:        id,
+				ID:        sewageOverflowObservedID,
 				Count:     msg.Stopwatch.Count,
 				Duration:  msg.Stopwatch.Duration,
 				Point:     current.Location,
@@ -96,11 +98,11 @@ func (s *SewageOverflow) Handle(ctx context.Context, msg *events.FunctionUpdated
 		} else {
 			if observation.EndTime != nil {
 				err = fmt.Errorf("observation already ended at %s", observation.EndTime.String())
-				log.Error("could not be ended", "id", id, "err", err.Error())
+				log.Error("could not be ended", "id", sewageOverflowObservedID, "err", err.Error())
 				return err
 			}
 
-			log.Debug("overflow ended", "id", id, "state", msg.Stopwatch.State)
+			log.Debug("overflow ended", "id", sewageOverflowObservedID, "state", msg.Stopwatch.State)
 
 			observation.Duration = msg.Stopwatch.Duration
 			observation.EndTime = msg.Stopwatch.StopTime
