@@ -31,6 +31,7 @@ type SewageOverflowObserved struct {
 	Count     int32          `json:"count"`
 	Duration  *time.Duration `json:"duration,omitempty"`
 	EndTime   *time.Time     `json:"endTime,omitempty"`
+	Point     Point          `json:"location"`
 	State     bool           `json:"state"`
 	StartTime *time.Time     `json:"startTime"`
 	Timestamp time.Time      `json:"timestamp"`
@@ -82,6 +83,7 @@ func (s *SewageOverflow) Handle(ctx context.Context, msg *events.FunctionUpdated
 				ID:        id,
 				Count:     msg.Stopwatch.Count,
 				Duration:  msg.Stopwatch.Duration,
+				Point:     current.Location,
 				State:     msg.Stopwatch.State,
 				StartTime: &msg.Stopwatch.StartTime,
 				Timestamp: time.Now().UTC(),
