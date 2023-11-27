@@ -6,14 +6,17 @@ import (
 	"flag"
 	"io"
 	"log/slog"
+	"net/http"
 	"os"
 
 	"github.com/diwise/cip-functions/internal/pkg/application"
 	"github.com/diwise/cip-functions/internal/pkg/application/functions"
 	"github.com/diwise/cip-functions/internal/pkg/infrastructure/database"
+	api "github.com/diwise/cip-functions/internal/pkg/presentation"
 	"github.com/diwise/cip-functions/pkg/messaging/events"
 	"github.com/diwise/messaging-golang/pkg/messaging"
 	"github.com/diwise/service-chassis/pkg/infrastructure/buildinfo"
+	"github.com/diwise/service-chassis/pkg/infrastructure/env"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/tracing"
@@ -49,9 +52,15 @@ func main() {
 		defer configFile.Close()
 	}
 
-	_, err = initialize(ctx, msgCtx, configFile, storage)
+	_, api_, err := initialize(ctx, msgCtx, configFile, storage)
 	if err != nil {
 		fatal(ctx, "initialization failed", err)
+	}
+
+	servicePort := env.GetVariableOrDefault(ctx, "SERVICE_PORT", "8080")
+	err = http.ListenAndServe(":"+servicePort, api_.Router())
+	if err != nil {
+		fatal(ctx, "failed to start request router", err)
 	}
 }
 
@@ -79,10 +88,10 @@ func createDatabaseConnectionOrDie(ctx context.Context) database.Storage {
 	return storage
 }
 
-func initialize(ctx context.Context, msgctx messaging.MsgContext, fconfig io.Reader, storage database.Storage) (application.App, error) {
+func initialize(ctx context.Context, msgctx messaging.MsgContext, fconfig io.Reader, storage database.Storage) (application.App, api.API, error) {
 	fnRegistry, err := functions.NewRegistry(ctx, fconfig)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	app := application.New(storage, msgctx, fnRegistry)
@@ -90,7 +99,7 @@ func initialize(ctx context.Context, msgctx messaging.MsgContext, fconfig io.Rea
 	routingKey := "function.updated"
 	msgctx.RegisterTopicMessageHandler(routingKey, newTopicMessageHandler(app))
 
-	return app, nil
+	return app, api.New(ctx), nil
 }
 
 func newTopicMessageHandler(app application.App) messaging.TopicMessageHandler {
