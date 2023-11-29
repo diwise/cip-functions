@@ -31,7 +31,7 @@ var functionsConfigPath string
 
 func main() {
 	serviceVersion := buildinfo.SourceVersion()
-	ctx, _, cleanup := o11y.Init(context.Background(), serviceName, serviceVersion)
+	ctx, log, cleanup := o11y.Init(context.Background(), serviceName, serviceVersion)
 	defer cleanup()
 
 	flag.StringVar(&functionsConfigPath, "functions", "/opt/diwise/config/cip-functions.csv", "configuration file for functions")
@@ -45,9 +45,11 @@ func main() {
 	var configFile *os.File
 
 	if functionsConfigPath != "" {
+		log.Debug("using config file", "path", functionsConfigPath)
+		
 		configFile, err = os.Open(functionsConfigPath)
 		if err != nil {
-			fatal(ctx, "failed to open functions config file", err)
+			fatal(ctx, "failed to open config file", err)
 		}
 		defer configFile.Close()
 	}
