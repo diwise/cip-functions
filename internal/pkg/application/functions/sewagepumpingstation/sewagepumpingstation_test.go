@@ -18,7 +18,7 @@ func TestSewagePumpingStationHandleCreatesNewSewagePumpingStationIfIDDoesNotExis
 	err := sp.Handle(context.Background(), &msg, dbMock, msgCtxMock)
 
 	is.NoErr(err)
-	is.True(len(dbMock.CreateCalls()) == 1) //create should be called once to create a new sewagepumpingstation
+	is.Equal(len(dbMock.CreateCalls()), 1) //create should be called once to create a new sewagepumpingstation
 }
 
 func TestSewagePumpingStationHandleCreatesNewAlertIfFirstStateIsTrue(t *testing.T) {
@@ -28,8 +28,7 @@ func TestSewagePumpingStationHandleCreatesNewAlertIfFirstStateIsTrue(t *testing.
 	err := sp.Handle(context.Background(), &msg, dbMock, msgCtxMock)
 
 	is.NoErr(err)
-	is.True(len(dbMock.CreateCalls()) == 2) //create should be called twice, once for the sewagepumpingstation, once for an alert
-	is.True(len(dbMock.UpdateCalls()) == 1) //update should be called to give the sewagepumpingstation its activeAlert ID
+	is.Equal(len(dbMock.CreateCalls()), 1) //create should be called once to create a new sewagepumpingstation
 }
 
 func TestSewagePumpingStationHandleChecksIfStateHasUpdatedOnExisting(t *testing.T) {
@@ -48,8 +47,7 @@ func TestSewagePumpingStationHandleChecksIfStateHasUpdatedOnExisting(t *testing.
 	err = sp2.Handle(context.Background(), &msg, dbMock, msgCtxMock)
 
 	is.NoErr(err)
-	is.Equal(len(dbMock.CreateCalls()), 1) //create should be called once to create a new sewagepumpingstation
-	is.Equal(len(dbMock.UpdateCalls()), 3) //update is called three times first with timestamp from same state, then with altered state for both sewagepumpingstation and alert
+	is.Equal(len(dbMock.UpdateCalls()), 2) //update is called twice, first with timestamp from same state, then with altered state for sewagepumpingstation
 }
 
 func TestSewagePumpingStationHandleChecksIfAlertCloses(t *testing.T) {
@@ -68,7 +66,7 @@ func TestSewagePumpingStationHandleChecksIfAlertCloses(t *testing.T) {
 	err = sp2.Handle(context.Background(), &msg, dbMock, msgCtxMock)
 
 	is.NoErr(err)
-	is.Equal(len(dbMock.UpdateCalls()), 4)
+	is.Equal(len(dbMock.UpdateCalls()), 2)
 }
 
 func TestSewagePumpingStationHandleChecksIfStatusIsUnchanged(t *testing.T) {
@@ -84,15 +82,17 @@ func TestSewagePumpingStationHandleChecksIfStatusIsUnchanged(t *testing.T) {
 	err = sp2.Handle(context.Background(), &msg, dbMock, msgCtxMock)
 
 	is.NoErr(err)
-	is.Equal(len(dbMock.UpdateCalls()), 4)
+	is.Equal(len(dbMock.UpdateCalls()), 2)
 }
 
 func testSetup(t *testing.T, msgID string, state bool) (*is.I, *database.StorageMock, *messaging.MsgContextMock, events.FunctionUpdated) {
 	is := is.New(t)
 
+	timestamp := time.Now()
+
 	msg := events.FunctionUpdated{
 		ID:   msgID,
-		Type: "Stopwatch",
+		Type: "stopwatch",
 		Stopwatch: struct {
 			Count          int32          "json:\"count\""
 			CumulativeTime time.Duration  "json:\"cumulativeTime\""
@@ -102,14 +102,14 @@ func testSetup(t *testing.T, msgID string, state bool) (*is.I, *database.Storage
 			StopTime       *time.Time     "json:\"stopTime,omitempty\""
 		}{
 			State:     state,
-			StartTime: time.Now(),
+			StartTime: timestamp,
 		},
-		Timestamp: time.Now(),
+		Timestamp: timestamp,
 	}
 
 	dbMock := &database.StorageMock{
 		ExistsFunc: func(ctx context.Context, id string) bool {
-			if id == "SewagePumpingStationObserved:fnID:004" || id == "generateAnAlertID" {
+			if id == "sewagepumpingstation:fnID:004" {
 				return true
 			} else {
 				return false
@@ -122,15 +122,13 @@ func testSetup(t *testing.T, msgID string, state bool) (*is.I, *database.Storage
 			return nil
 		},
 		SelectFunc: func(ctx context.Context, id string) (any, error) {
-			return SewagePumpingStationObserved{
-				ID: "SewagePumpingStationObserved:fnID:004",
-				ActiveAlert: struct {
-					State bool   "json:\"state\""
-					ID    string "json:\"alertID,omitempty\""
-				}{
-					State: state,
-					ID:    "generateAnAlertID",
-				},
+			return SewagePumpingStation{
+				ID:    id,
+				State: state,
+
+				StartTime: &timestamp,
+
+				ObservedAt: &timestamp,
 			}, nil
 		},
 	}

@@ -23,7 +23,7 @@ type fnImpl struct {
 	Type_ string `json:"type"`
 
 	SewageOverflow       combinedsewageoverflow.SewageOverflow     `json:"sewageOverflow,omitempty"`
-	SewagePumpingStation sewagepumpingstation.SewagePumpingStation `json:"sewagepumpingstation,omitempty"`
+	SewagePumpingStation sewagepumpingstation.SewagePumpingStation `json:"sewagePumpingStation,omitempty"`
 
 	handle func(ctx context.Context, msg *events.FunctionUpdated, storage database.Storage, msgCtx messaging.MsgContext, opts ...options.Option) error
 }

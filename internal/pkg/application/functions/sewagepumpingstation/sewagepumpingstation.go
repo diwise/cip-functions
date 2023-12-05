@@ -10,154 +10,130 @@ import (
 	"github.com/diwise/cip-functions/pkg/messaging/events"
 	"github.com/diwise/cip-functions/pkg/messaging/topics"
 	"github.com/diwise/messaging-golang/pkg/messaging"
+	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
 )
 
 const FunctionName string = "sewagepumpingstation"
 
-type SewagePumpingStation interface {
-	Handle(ctx context.Context, msg *events.FunctionUpdated, storage database.Storage, msgCtx messaging.MsgContext, opts ...options.Option) error
-}
+type SewagePumpingStation struct {
+	ID    string `json:"id"`
+	State bool   `json:"state"`
 
-type sp struct {
+	StartTime *time.Time `json:"startTime,omitempty"`
+	EndTime   *time.Time `json:"endTime,omitempty"`
+
+	ObservedAt *time.Time `json:"observedAt"`
 }
 
 func New() SewagePumpingStation {
-	sp := &sp{}
-
-	return sp
+	return SewagePumpingStation{}
 }
 
-type SewagePumpingStationObserved struct {
-	ID          string `json:"id"`
-	ActiveAlert struct {
-		State bool   `json:"state"`
-		ID    string `json:"alertID,omitempty"`
-	} `json:"activeAlert,omitempty"`
-	PreviousAlerts []string   `json:"previousAlerts,omitempty"`
-	StartTime      *time.Time `json:"startTime,omitempty"`
-	EndTime        *time.Time `json:"endTime,omitempty"`
-	LastObserved   *time.Time `json:"lastObserved"`
+func (sp SewagePumpingStation) TopicName() string {
+	return topics.CipFunctionsUpdated
 }
 
-func (sp *sp) Handle(ctx context.Context, msg *events.FunctionUpdated, storage database.Storage, msgCtx messaging.MsgContext, opts ...options.Option) error {
-	//generate ID
-	id := fmt.Sprintf("SewagePumpingStationObserved:%s", msg.ID)
+func (sp SewagePumpingStation) ContentType() string {
+	return "application/vnd+diwise.sewagepumpingstation+json"
+}
+
+func (sp *SewagePumpingStation) Handle(ctx context.Context, msg *events.FunctionUpdated, storage database.Storage, msgCtx messaging.MsgContext, opts ...options.Option) error {
+
+	log := logging.GetFromContext(ctx)
+
+	if msg.Type != "stopwatch" {
+		log.Info("invalid function type", "id", msg.ID, "type", msg.Type, "sub_type", msg.SubType)
+		return nil
+	}
+
+	id := fmt.Sprintf("sewagepumpingstation:%s", msg.ID)
 
 	exists := storage.Exists(ctx, id)
 	if !exists {
-		time := time.Now().UTC()
-		err := storage.Create(ctx, id, SewagePumpingStationObserved{
-			ID: id,
-			ActiveAlert: struct {
-				State bool   "json:\"state\""
-				ID    string "json:\"alertID,omitempty\""
-			}{
-				State: msg.Stopwatch.State,
-			},
-			LastObserved: &time,
-		})
-		if err != nil {
-			return err
+		spo := SewagePumpingStation{
+			ID:         id,
+			State:      msg.Stopwatch.State,
+			ObservedAt: &msg.Timestamp,
 		}
-		//TODO: send sewagepumpingstation on queue
 
 		if msg.Stopwatch.State {
-			alertID := fmt.Sprintf("Alert:alertID:%s", id) //TODO: better ID generation
-			err = storage.Create(ctx, fmt.Sprintf("%s:alert:", id), Alert{
-				ID:        alertID,
-				State:     msg.Stopwatch.State,
-				StartTime: &msg.Stopwatch.StartTime,
-			})
-			if err != nil {
-				return err
-			}
-			//TODO: send created alert on queue
-
-			spo, err := database.Get[SewagePumpingStationObserved](ctx, storage, id)
-			if err != nil {
-				return err
+			if msg.Stopwatch.StartTime.IsZero() {
+				log.Error("invalid stopwatch message", msg.ID, "state is true, but stopwatch does not have a start time")
+				return nil
 			}
 
-			spo.ActiveAlert.ID = alertID
+			spo.StartTime = &msg.Stopwatch.StartTime
+		} else {
+			if !msg.Stopwatch.StartTime.IsZero() {
+				spo.StartTime = &msg.Stopwatch.StartTime
+			} else {
+				log.Info("state is false and start time is empty")
+			}
 
-			storage.Update(ctx, id, spo)
-			//TODO: send updated sewagepumpingstation on queue
 		}
-	} else {
-		spo, err := database.Get[SewagePumpingStationObserved](ctx, storage, id)
+
+		err := storage.Create(ctx, id, spo)
 		if err != nil {
 			return err
 		}
-		if spo.ActiveAlert.State != msg.Stopwatch.State {
-			if msg.Stopwatch.State {
-				alert := Alert{
-					ID:          "generateAnAlertID",
-					AlertSource: spo.ID,
-					State:       msg.Stopwatch.State,
-					StartTime:   &msg.Stopwatch.StartTime,
-				}
-				storage.Create(ctx, id, alert)
-				//TODO: send updated alert on queue
 
-				spo.ActiveAlert.ID = alert.ID
-				spo.LastObserved = alert.StartTime
+		log.Info("creating new sewagepumpingstation in storage", "id", spo.ID)
+
+		err = msgCtx.PublishOnTopic(ctx, spo)
+		if err != nil {
+			log.Error("failed to publish new sewagepumpingstation message")
+			return err
+		}
+
+		log.Info("published new sewagepumpingstation message", "id", spo.ID)
+
+	} else {
+		spo, err := database.Get[SewagePumpingStation](ctx, storage, id)
+		if err != nil {
+			return err
+		}
+		if spo.State != msg.Stopwatch.State {
+			if msg.Stopwatch.State {
+				spo.State = msg.Stopwatch.State
+
+				if msg.Stopwatch.StartTime.IsZero() {
+					log.Error("invalid stopwatch message", msg.ID, "state is true, but stopwatch does not have a start time")
+					return nil
+				}
+
+				spo.StartTime = &msg.Stopwatch.StartTime
+				spo.ObservedAt = &msg.Timestamp
 
 				storage.Update(ctx, id, spo)
-				//TODO: send update alert on queue
+				log.Info("updating sewagepumpingstation in storage", "id", spo.ID)
+
+				err = msgCtx.PublishOnTopic(ctx, spo)
+				if err != nil {
+					return fmt.Errorf("failed to publish updated sewagepumpingstation message: %s", err)
+				}
+				log.Info("published updated sewagepumpingstation message", "id", spo.ID)
 
 			} else {
-				alert, err := database.Get[Alert](ctx, storage, id)
-				if err != nil {
-					return err
-				}
-				alert.State = msg.Stopwatch.State
-				alert.EndTime = msg.Stopwatch.StopTime
+				spo.State = msg.Stopwatch.State
 
-				storage.Update(ctx, alert.ID, alert)
-				//TODO: send updated alert on queue
-
-				spo.PreviousAlerts = append(spo.PreviousAlerts, alert.ID)
-				spo.ActiveAlert.State = msg.Stopwatch.State
-				spo.ActiveAlert.ID = ""
-				spo.LastObserved = &msg.Timestamp
-
+				spo.ObservedAt = &msg.Timestamp
 				storage.Update(ctx, id, spo)
-				//TODO: send updated alert on queue
-			}
-		} else if spo.ActiveAlert.State == msg.Stopwatch.State {
-			if storage.Exists(ctx, spo.ActiveAlert.ID) {
-				alert, err := database.Get[Alert](ctx, storage, id)
+
+				err = msgCtx.PublishOnTopic(ctx, spo)
 				if err != nil {
-					return err
+					return fmt.Errorf("failed to publish updated sewagepumpingstation message: %s", err)
 				}
-
-				alert.LastObserved = &msg.Timestamp
-				storage.Update(ctx, id, alert)
-				//TODO: send updated alert on queue
-
 			}
-			spo.LastObserved = &msg.Timestamp
+		} else if spo.State == msg.Stopwatch.State {
+			spo.ObservedAt = &msg.Timestamp
 			storage.Update(ctx, id, spo)
-			//TODO: send updated alert on queue
+
+			err = msgCtx.PublishOnTopic(ctx, spo)
+			if err != nil {
+				return fmt.Errorf("failed to publish updated sewagepumpingstation message: %s", err)
+			}
 		}
 	}
 
 	return nil
-}
-
-type Alert struct {
-	ID           string     `json:"id"`
-	AlertSource  string     `json:"alertSource"`
-	State        bool       `json:"state"`
-	StartTime    *time.Time `json:"startTime"`
-	EndTime      *time.Time `json:"endTime,omitempty"`
-	LastObserved *time.Time `json:"lastObserved"`
-}
-
-func (a Alert) TopicName() string {
-	return topics.CipFunctionsUpdated
-}
-
-func (a Alert) ContentType() string {
-	return "application/vnd+diwise.alertstarted+json"
 }
