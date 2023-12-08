@@ -117,6 +117,11 @@ func (sp *SewagePumpingStation) Handle(ctx context.Context, msg *events.Function
 				spo.State = msg.Stopwatch.State
 
 				spo.ObservedAt = &msg.Timestamp
+
+				if spo.EndTime != nil && msg.Stopwatch.StopTime != nil {
+					spo.EndTime = msg.Stopwatch.StopTime
+				}
+
 				storage.Update(ctx, id, spo)
 
 				err = msgCtx.PublishOnTopic(ctx, spo)
