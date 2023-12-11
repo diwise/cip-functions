@@ -29,6 +29,10 @@ func New() SewagePumpingStation {
 	return SewagePumpingStation{}
 }
 
+func (sp SewagePumpingStation) Body() []byte {
+	return []byte{}
+}
+
 func (sp SewagePumpingStation) TopicName() string {
 	return topics.CipFunctionsUpdated
 }
