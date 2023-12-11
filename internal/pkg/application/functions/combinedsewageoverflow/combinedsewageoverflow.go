@@ -112,6 +112,11 @@ func (s *SewageOverflow) Handle(ctx context.Context, msg *events.FunctionUpdated
 	return database.CreateOrUpdate[SewageOverflow](ctx, storage, current.ID, current)
 }
 
+func (s SewageOverflowObserved) Body() []byte {
+	// TODO: fill out this function...
+	return []byte{}
+}
+
 func (s SewageOverflowObserved) TopicName() string {
 	return topics.CipFunctionsUpdated
 }

@@ -20,7 +20,6 @@ import (
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/tracing"
-	amqp "github.com/rabbitmq/amqp091-go"
 	"go.opentelemetry.io/otel"
 )
 
@@ -73,6 +72,8 @@ func createMessagingContextOrDie(ctx context.Context) messaging.MsgContext {
 		fatal(ctx, "failed to init messaging", err)
 	}
 
+	messenger.Start()
+
 	return messenger
 }
 
@@ -103,30 +104,30 @@ func initialize(ctx context.Context, msgctx messaging.MsgContext, fconfig io.Rea
 }
 
 func newTopicMessageHandler(app application.App) messaging.TopicMessageHandler {
-	return func(ctx context.Context, msg amqp.Delivery, logger *slog.Logger) {
+	return func(ctx context.Context, itm messaging.IncomingTopicMessage, l *slog.Logger) {
 		var err error
 
 		ctx, span := tracer.Start(ctx, "receive-message")
 		defer func() { tracing.RecordAnyErrorAndEndSpan(err, span) }()
 
-		_, ctx, logger = o11y.AddTraceIDToLoggerAndStoreInContext(span, logger, ctx)
+		_, ctx, l = o11y.AddTraceIDToLoggerAndStoreInContext(span, l, ctx)
 
-		logger.Debug("received message", "body", string(msg.Body))
+		l.Debug("received message", "body", string(itm.Body()))
 
 		evt := events.FunctionUpdated{}
 
-		err = json.Unmarshal(msg.Body, &evt)
+		err = json.Unmarshal(itm.Body(), &evt)
 		if err != nil {
-			logger.Error("unable to unmarshal incoming message", "err", err.Error())
+			l.Error("unable to unmarshal incoming message", "err", err.Error())
 			return
 		}
 
-		logger = logger.With(slog.String("function_id", evt.ID))
-		ctx = logging.NewContextWithLogger(ctx, logger)
+		l = l.With(slog.String("function_id", evt.ID))
+		ctx = logging.NewContextWithLogger(ctx, l)
 
 		err = app.FunctionUpdated(ctx, evt)
 		if err != nil {
-			logger.Error("failed to handle message", "err", err.Error())
+			l.Error("failed to handle message", "err", err.Error())
 		}
 	}
 }
