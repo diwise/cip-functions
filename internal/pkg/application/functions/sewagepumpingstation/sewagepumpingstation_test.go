@@ -19,6 +19,7 @@ func TestSewagePumpingStationHandleCreatesNewSewagePumpingStationIfIDDoesNotExis
 
 	is.NoErr(err)
 	is.Equal(len(dbMock.CreateCalls()), 1) //create should be called once to create a new sewagepumpingstation
+	is.Equal(len(msgCtxMock.PublishOnTopicCalls()), 1)
 }
 
 func TestSewagePumpingStationHandleCreatesNewAlertIfFirstStateIsTrue(t *testing.T) {
@@ -29,6 +30,7 @@ func TestSewagePumpingStationHandleCreatesNewAlertIfFirstStateIsTrue(t *testing.
 
 	is.NoErr(err)
 	is.Equal(len(dbMock.CreateCalls()), 1) //create should be called once to create a new sewagepumpingstation
+	is.Equal(len(msgCtxMock.PublishOnTopicCalls()), 1)
 }
 
 func TestSewagePumpingStationHandleChecksIfStateHasUpdatedOnExisting(t *testing.T) {
@@ -48,6 +50,7 @@ func TestSewagePumpingStationHandleChecksIfStateHasUpdatedOnExisting(t *testing.
 
 	is.NoErr(err)
 	is.Equal(len(dbMock.UpdateCalls()), 2) //update is called twice, first with timestamp from same state, then with altered state for sewagepumpingstation
+	is.Equal(len(msgCtxMock.PublishOnTopicCalls()), 2)
 }
 
 func TestSewagePumpingStationHandleChecksIfAlertCloses(t *testing.T) {
@@ -67,6 +70,7 @@ func TestSewagePumpingStationHandleChecksIfAlertCloses(t *testing.T) {
 
 	is.NoErr(err)
 	is.Equal(len(dbMock.UpdateCalls()), 2)
+	is.Equal(len(msgCtxMock.PublishOnTopicCalls()), 2)
 }
 
 func TestSewagePumpingStationHandleChecksIfStatusIsUnchanged(t *testing.T) {
@@ -83,6 +87,7 @@ func TestSewagePumpingStationHandleChecksIfStatusIsUnchanged(t *testing.T) {
 
 	is.NoErr(err)
 	is.Equal(len(dbMock.UpdateCalls()), 2)
+	is.Equal(len(msgCtxMock.PublishOnTopicCalls()), 2)
 }
 
 func testSetup(t *testing.T, msgID string, state bool) (*is.I, *database.StorageMock, *messaging.MsgContextMock, events.FunctionUpdated) {
