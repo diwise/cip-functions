@@ -39,6 +39,8 @@ func main() {
 	var err error
 
 	msgCtx := createMessagingContextOrDie(ctx)
+	defer msgCtx.Close()
+
 	storage := createDatabaseConnectionOrDie(ctx)
 
 	var configFile *os.File
