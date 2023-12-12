@@ -75,6 +75,7 @@ func createMessagingContextOrDie(ctx context.Context) messaging.MsgContext {
 	}
 
 	messenger.Start()
+	logger.Info("starting messaging service")
 
 	return messenger
 }

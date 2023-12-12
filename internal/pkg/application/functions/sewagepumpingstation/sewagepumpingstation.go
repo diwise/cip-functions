@@ -89,7 +89,7 @@ func (sp *SewagePumpingStation) Handle(ctx context.Context, msg *events.Function
 			return err
 		}
 
-		log.Info("published new sewagepumpingstation message", "id", spo.ID)
+		log.Info("published message with id %s on topic %s", spo.ID, spo.TopicName())
 
 	} else {
 		spo, err := database.Get[SewagePumpingStation](ctx, storage, id)
@@ -115,7 +115,7 @@ func (sp *SewagePumpingStation) Handle(ctx context.Context, msg *events.Function
 				if err != nil {
 					return fmt.Errorf("failed to publish updated sewagepumpingstation message: %s", err)
 				}
-				log.Info("published updated sewagepumpingstation message", "id", spo.ID)
+				log.Info("published message with id %s on topic %s", spo.ID, spo.TopicName())
 
 			} else {
 				spo.State = msg.Stopwatch.State
@@ -132,6 +132,7 @@ func (sp *SewagePumpingStation) Handle(ctx context.Context, msg *events.Function
 				if err != nil {
 					return fmt.Errorf("failed to publish updated sewagepumpingstation message: %s", err)
 				}
+				log.Info("published message with id %s on topic %s", spo.ID, spo.TopicName())
 			}
 		} else if spo.State == msg.Stopwatch.State {
 			spo.ObservedAt = &msg.Timestamp
@@ -141,6 +142,7 @@ func (sp *SewagePumpingStation) Handle(ctx context.Context, msg *events.Function
 			if err != nil {
 				return fmt.Errorf("failed to publish updated sewagepumpingstation message: %s", err)
 			}
+			log.Info("published message with id %s on topic %s", spo.ID, spo.TopicName())
 		}
 	}
 

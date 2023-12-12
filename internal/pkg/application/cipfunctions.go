@@ -32,20 +32,24 @@ func New(s database.Storage, m messaging.MsgContext, r functions.Registry) App {
 
 func (a *app) FunctionUpdated(ctx context.Context, msg events.FunctionUpdated) error {
 	log := logging.GetFromContext(ctx)
+	log.Info("inside function updated", "id", msg.ID, "type", msg.Type)
 
 	registryItems, err := a.fnRegistry.Find(ctx, functions.FindByFunctionID(msg.ID))
 	if err != nil {
 		return err
 	}
+	log.Info("found registry items", "number of items", len(registryItems))
 
 	var errs []error
 
 	for _, item := range registryItems {
+		log.Info("looking through registry items", "item", item)
 		err := item.Fn.Handle(ctx, &msg, a.storage, a.msgCtx, item.Options...)
 		if err != nil {
 			log.Error("failed to handle message", "function_id", item.FnID, "type", item.Type, "err", err.Error())
 			errs = append(errs, err)
 		}
+		log.Info("called handle on %s of type %d", item.FnID, item.Type)
 	}
 
 	return errors.Join(errs...)
