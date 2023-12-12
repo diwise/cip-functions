@@ -42,7 +42,6 @@ func (sp SewagePumpingStation) ContentType() string {
 }
 
 func (sp *SewagePumpingStation) Handle(ctx context.Context, msg *events.FunctionUpdated, storage database.Storage, msgCtx messaging.MsgContext, opts ...options.Option) error {
-
 	log := logging.GetFromContext(ctx)
 
 	if msg.Type != "stopwatch" {
@@ -50,7 +49,7 @@ func (sp *SewagePumpingStation) Handle(ctx context.Context, msg *events.Function
 		return nil
 	}
 
-	id := fmt.Sprintf("sewagepumpingstation:%s", msg.ID)
+	id := msg.ID
 
 	exists := storage.Exists(ctx, id)
 	if !exists {

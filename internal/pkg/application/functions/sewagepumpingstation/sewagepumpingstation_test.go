@@ -114,7 +114,7 @@ func testSetup(t *testing.T, msgID string, state bool) (*is.I, *database.Storage
 
 	dbMock := &database.StorageMock{
 		ExistsFunc: func(ctx context.Context, id string) bool {
-			if id == "sewagepumpingstation:fnID:004" {
+			if id == "fnID:004" {
 				return true
 			} else {
 				return false
@@ -138,7 +138,11 @@ func testSetup(t *testing.T, msgID string, state bool) (*is.I, *database.Storage
 		},
 	}
 
-	msgCtxMock := &messaging.MsgContextMock{}
+	msgCtxMock := &messaging.MsgContextMock{
+		PublishOnTopicFunc: func(ctx context.Context, message messaging.TopicMessage) error {
+			return nil
+		},
+	}
 
 	return is, dbMock, msgCtxMock, msg
 }

@@ -49,7 +49,7 @@ func (a *app) FunctionUpdated(ctx context.Context, msg events.FunctionUpdated) e
 			log.Error("failed to handle message", "function_id", item.FnID, "type", item.Type, "err", err.Error())
 			errs = append(errs, err)
 		}
-		log.Info("called handle on %s of type %d", item.FnID, item.Type)
+
 	}
 
 	return errors.Join(errs...)
