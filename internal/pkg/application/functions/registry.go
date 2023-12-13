@@ -62,8 +62,8 @@ func NewRegistry(ctx context.Context, input io.Reader) (Registry, error) {
 			fn.handle = fn.SewageOverflow.Handle
 			item.Fn = &fn
 		case sewagepumpingstation.FunctionName:
-			fn.SewagePumpingStation = sewagepumpingstation.New()
-			fn.handle = fn.SewagePumpingStation.Handle
+			fn.IncomingSewagePumpingStation = sewagepumpingstation.New()
+			fn.handle = fn.IncomingSewagePumpingStation.Handle
 			item.Fn = &fn
 		}
 		reg.items[item.FnID] = item

@@ -2,6 +2,7 @@ package sewagepumpingstation
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -15,6 +16,18 @@ import (
 
 const FunctionName string = "sewagepumpingstation"
 
+type IncomingSewagePumpingStation struct {
+	ID    string `json:"id"`
+	Type  string `json:"type"`
+	State bool   `json:"state"`
+	//Tenant string `json:"tenant"`
+
+	StartTime *time.Time `json:"startTime,omitempty"`
+	EndTime   *time.Time `json:"endTime,omitempty"`
+
+	ObservedAt *time.Time `json:"observedAt"`
+}
+
 type SewagePumpingStation struct {
 	ID    string `json:"id"`
 	State bool   `json:"state"`
@@ -25,23 +38,31 @@ type SewagePumpingStation struct {
 	ObservedAt *time.Time `json:"observedAt"`
 }
 
-func New() SewagePumpingStation {
-	return SewagePumpingStation{}
+func New() IncomingSewagePumpingStation {
+	return IncomingSewagePumpingStation{}
 }
 
 func (sp SewagePumpingStation) Body() []byte {
-	return []byte{}
+
+	bytes, err := json.Marshal(sp)
+	if err != nil {
+		//fmt.Errorf("failed to marshal sewagepumpingstation into json: %s", sp.ID)
+		return []byte{}
+	}
+
+	return bytes
 }
 
 func (sp SewagePumpingStation) TopicName() string {
-	return topics.CipFunctionsUpdated
+	return topics.CipFunctionUpdated
 }
 
 func (sp SewagePumpingStation) ContentType() string {
 	return "application/vnd+diwise.sewagepumpingstation+json"
 }
 
-func (sp *SewagePumpingStation) Handle(ctx context.Context, msg *events.FunctionUpdated, storage database.Storage, msgCtx messaging.MsgContext, opts ...options.Option) error {
+func (sp *IncomingSewagePumpingStation) Handle(ctx context.Context, msg *events.FunctionUpdated, storage database.Storage, msgCtx messaging.MsgContext, opts ...options.Option) error {
+
 	log := logging.GetFromContext(ctx)
 
 	if msg.Type != "stopwatch" {
