@@ -46,7 +46,6 @@ func (sp SewagePumpingStation) Body() []byte {
 
 	bytes, err := json.Marshal(sp)
 	if err != nil {
-		//fmt.Errorf("failed to marshal sewagepumpingstation into json: %s", sp.ID)
 		return []byte{}
 	}
 
