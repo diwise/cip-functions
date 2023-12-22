@@ -17,10 +17,10 @@ import (
 const FunctionName string = "sewagepumpingstation"
 
 type IncomingSewagePumpingStation struct {
-	ID    string `json:"id"`
-	Type  string `json:"type"`
-	State bool   `json:"state"`
-	//Tenant string `json:"tenant"`
+	ID     string `json:"id"`
+	Type   string `json:"type"`
+	State  bool   `json:"state"`
+	Tenant string `json:"tenant"`
 
 	StartTime *time.Time `json:"startTime,omitempty"`
 	EndTime   *time.Time `json:"endTime,omitempty"`
@@ -29,8 +29,9 @@ type IncomingSewagePumpingStation struct {
 }
 
 type SewagePumpingStation struct {
-	ID    string `json:"id"`
-	State bool   `json:"state"`
+	ID     string `json:"id"`
+	State  bool   `json:"state"`
+	Tenant string `json:"tenant"`
 
 	StartTime *time.Time `json:"startTime,omitempty"`
 	EndTime   *time.Time `json:"endTime,omitempty"`
@@ -76,6 +77,7 @@ func (sp *IncomingSewagePumpingStation) Handle(ctx context.Context, msg *events.
 		spo := SewagePumpingStation{
 			ID:         id,
 			State:      msg.Stopwatch.State,
+			Tenant:     msg.Tenant,
 			ObservedAt: &msg.Timestamp,
 		}
 
