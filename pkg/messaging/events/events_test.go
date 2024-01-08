@@ -15,4 +15,4 @@ func testSetup(t *testing.T) *is.I {
 	return is
 }
 
-const incomingMsg string = `{"id":"functionID","name":"name","type":"Stopwatch","Stopwatch":{"state":0,"timestamp":"2023-06-05T11:26:57Z"}}`
+const incomingMsg string = `{"id":"functionID","name":"name","type":"stopwatch","stopwatch":{"state":0,"timestamp":"2023-06-05T11:26:57Z"}}`

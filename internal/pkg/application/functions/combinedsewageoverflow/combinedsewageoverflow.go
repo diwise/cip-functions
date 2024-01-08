@@ -118,7 +118,7 @@ func (s SewageOverflowObserved) Body() []byte {
 }
 
 func (s SewageOverflowObserved) TopicName() string {
-	return topics.CipFunctionsUpdated
+	return topics.CipFunctionUpdated
 }
 
 func (s SewageOverflowObserved) ContentType() string {

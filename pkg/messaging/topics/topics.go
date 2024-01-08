@@ -1,5 +1,5 @@
 package topics
 
 const (
-	CipFunctionsUpdated string = "cip-functions.updated"
+	CipFunctionUpdated string = "cip-function.updated"
 )

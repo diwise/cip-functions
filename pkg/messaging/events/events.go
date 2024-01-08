@@ -18,8 +18,7 @@ type FunctionUpdated struct {
 	Timer        timers.Timer                `json:"timer,omitempty"`
 	WaterQuality waterqualities.WaterQuality `json:"waterquality,omitempty"`
 	Building     buildings.Building          `json:"building,omitempty"`
-	AirQuality   airquality.AirQuality       `json:"AirQuality,omitempty"`
-	Stopwatch Stopwatch `json:"Stopwatch,omitempty"` */
+	AirQuality   airquality.AirQuality       `json:"AirQuality,omitempty"`*/
 
 	Stopwatch struct {
 		Count          int32          `json:"count"`
@@ -28,7 +27,7 @@ type FunctionUpdated struct {
 		StartTime      time.Time      `json:"startTime"`
 		State          bool           `json:"state"`
 		StopTime       *time.Time     `json:"stopTime,omitempty"`
-	} `json:"Stopwatch,omitempty"`
+	} `json:"stopwatch,omitempty"`
 }
 
 type Location struct {

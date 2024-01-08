@@ -22,8 +22,8 @@ type fnImpl struct {
 	ID_   string `json:"id"`
 	Type_ string `json:"type"`
 
-	SewageOverflow       combinedsewageoverflow.SewageOverflow     `json:"sewageOverflow,omitempty"`
-	SewagePumpingStation sewagepumpingstation.SewagePumpingStation `json:"sewagepumpingstation,omitempty"`
+	SewageOverflow               combinedsewageoverflow.SewageOverflow             `json:"sewageOverflow,omitempty"`
+	IncomingSewagePumpingStation sewagepumpingstation.IncomingSewagePumpingStation `json:"sewagePumpingStation,omitempty"`
 
 	handle func(ctx context.Context, msg *events.FunctionUpdated, storage database.Storage, msgCtx messaging.MsgContext, opts ...options.Option) error
 }
