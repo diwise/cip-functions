@@ -83,7 +83,7 @@ func (sp *IncomingSewagePumpingStation) Handle(ctx context.Context, msg *events.
 
 		if msg.Stopwatch.State {
 			if msg.Stopwatch.StartTime.IsZero() {
-				log.Error("invalid stopwatch message", msg.ID, "state is true, but stopwatch does not have a start time")
+				log.Error("invalid stopwatch message", "id", msg.ID, "msg", "state is true, but stopwatch does not have a start time")
 				return nil
 			}
 
@@ -91,18 +91,14 @@ func (sp *IncomingSewagePumpingStation) Handle(ctx context.Context, msg *events.
 		} else {
 			if !msg.Stopwatch.StartTime.IsZero() {
 				spo.StartTime = &msg.Stopwatch.StartTime
-			} else {
-				log.Info("state is false and start time is empty")
 			}
-
 		}
 
 		err := storage.Create(ctx, id, spo)
 		if err != nil {
+			log.Error("failed to create new sewagepumpingstation in storage")
 			return err
 		}
-
-		log.Info("creating new sewagepumpingstation in storage", "id", spo.ID)
 
 		err = msgCtx.PublishOnTopic(ctx, spo)
 		if err != nil {
@@ -115,6 +111,7 @@ func (sp *IncomingSewagePumpingStation) Handle(ctx context.Context, msg *events.
 	} else {
 		spo, err := database.Get[SewagePumpingStation](ctx, storage, id)
 		if err != nil {
+			log.Error("could not retrieve sewagepumpingstation from storage", "id", id, "msg", err)
 			return err
 		}
 		if spo.State != msg.Stopwatch.State {
@@ -122,7 +119,7 @@ func (sp *IncomingSewagePumpingStation) Handle(ctx context.Context, msg *events.
 				spo.State = msg.Stopwatch.State
 
 				if msg.Stopwatch.StartTime.IsZero() {
-					log.Error("invalid stopwatch message", msg.ID, "state is true, but stopwatch does not have a start time")
+					log.Error("invalid stopwatch message", "id", msg.ID, "msg", "state is true, but stopwatch does not have a start time")
 					return nil
 				}
 
@@ -130,7 +127,6 @@ func (sp *IncomingSewagePumpingStation) Handle(ctx context.Context, msg *events.
 				spo.ObservedAt = &msg.Timestamp
 
 				storage.Update(ctx, id, spo)
-				log.Info("updating sewagepumpingstation in storage", "id", spo.ID)
 
 				err = msgCtx.PublishOnTopic(ctx, spo)
 				if err != nil {
