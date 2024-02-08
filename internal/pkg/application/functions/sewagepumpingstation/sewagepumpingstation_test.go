@@ -42,7 +42,7 @@ func TestSewagePumpingStationHandleChecksIfStateHasUpdatedOnExisting(t *testing.
 	is.NoErr(err)
 
 	//update value on state
-	msg.Stopwatch.State = true
+	msg.State.State_ = true
 
 	//call New and Handle again with new value
 	sp2 := New()
@@ -62,7 +62,7 @@ func TestSewagePumpingStationHandleChecksIfAlertCloses(t *testing.T) {
 	is.NoErr(err)
 
 	//update value on state
-	msg.Stopwatch.State = false
+	msg.State.State_ = false
 
 	//call New and Handle again with new value
 	sp2 := New()
@@ -97,17 +97,11 @@ func testSetup(t *testing.T, msgID string, state bool) (*is.I, *database.Storage
 
 	msg := events.FunctionUpdated{
 		ID:   msgID,
-		Type: "stopwatch",
-		Stopwatch: struct {
-			Count          int32          "json:\"count\""
-			CumulativeTime time.Duration  "json:\"cumulativeTime\""
-			Duration       *time.Duration "json:\"duration,omitempty\""
-			StartTime      time.Time      "json:\"startTime\""
-			State          bool           "json:\"state\""
-			StopTime       *time.Time     "json:\"stopTime,omitempty\""
+		Type: "state",
+		State: struct {
+			State_ bool "json:\"state\""
 		}{
-			State:     state,
-			StartTime: timestamp,
+			State_: state,
 		},
 		Timestamp: timestamp,
 	}
@@ -130,8 +124,6 @@ func testSetup(t *testing.T, msgID string, state bool) (*is.I, *database.Storage
 			return SewagePumpingStation{
 				ID:    id,
 				State: state,
-
-				StartTime: &timestamp,
 
 				ObservedAt: &timestamp,
 			}, nil
