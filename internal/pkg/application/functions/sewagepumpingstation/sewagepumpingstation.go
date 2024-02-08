@@ -64,13 +64,18 @@ func (sp *IncomingSewagePumpingStation) Handle(ctx context.Context, msg *events.
 
 	id := msg.ID
 
+	timestamp, err := time.Parse(time.RFC3339, msg.State.Timestamp)
+	if err != nil {
+		log.Error("failed to parse time from state", "id", id, "msg", err)
+	}
+
 	exists := storage.Exists(ctx, id)
 	if !exists {
 		spo := SewagePumpingStation{
 			ID:         id,
 			State:      msg.State.State_,
 			Tenant:     msg.Tenant,
-			ObservedAt: &msg.Timestamp,
+			ObservedAt: &timestamp,
 		}
 
 		err := storage.Create(ctx, id, spo)
@@ -95,11 +100,6 @@ func (sp *IncomingSewagePumpingStation) Handle(ctx context.Context, msg *events.
 		}
 
 		spo.State = msg.State.State_
-
-		timestamp, err := time.Parse(time.RFC3339, msg.State.Timestamp)
-		if err != nil {
-			log.Error("failed to parse time from state", "id", id, "msg", err)
-		}
 
 		spo.ObservedAt = &timestamp
 
