@@ -21,7 +21,8 @@ type FunctionUpdated struct {
 	AirQuality   airquality.AirQuality       `json:"AirQuality,omitempty"`*/
 
 	State struct {
-		State_ bool `json:"state"`
+		Timestamp string `json:"timestamp"`
+		State_    bool   `json:"state"`
 	} `json:"state,omitempty"`
 
 	Stopwatch struct {

@@ -95,7 +95,13 @@ func (sp *IncomingSewagePumpingStation) Handle(ctx context.Context, msg *events.
 		}
 
 		spo.State = msg.State.State_
-		spo.ObservedAt = &msg.Timestamp
+
+		timestamp, err := time.Parse(time.RFC3339, msg.State.Timestamp)
+		if err != nil {
+			log.Error("failed to parse time from state", "id", id, "msg", err)
+		}
+
+		spo.ObservedAt = &timestamp
 
 		storage.Update(ctx, id, spo)
 

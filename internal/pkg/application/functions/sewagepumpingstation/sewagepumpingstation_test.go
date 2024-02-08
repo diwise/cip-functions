@@ -99,11 +99,13 @@ func testSetup(t *testing.T, msgID string, state bool) (*is.I, *database.Storage
 		ID:   msgID,
 		Type: "state",
 		State: struct {
-			State_ bool "json:\"state\""
+			Timestamp string "json:\"timestamp\""
+			State_    bool   "json:\"state\""
 		}{
-			State_: state,
+
+			Timestamp: timestamp.Format(time.RFC3339),
+			State_:    state,
 		},
-		Timestamp: timestamp,
 	}
 
 	dbMock := &database.StorageMock{
