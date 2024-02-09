@@ -20,10 +20,10 @@ type FunctionUpdated struct {
 	Building     buildings.Building          `json:"building,omitempty"`
 	AirQuality   airquality.AirQuality       `json:"AirQuality,omitempty"`*/
 
-	State struct {
+	DigitalInput struct {
 		Timestamp string `json:"timestamp"`
 		State_    bool   `json:"state"`
-	} `json:"state,omitempty"`
+	} `json:"digitalinput,omitempty"`
 
 	Stopwatch struct {
 		Count          int32          `json:"count"`

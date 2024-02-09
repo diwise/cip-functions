@@ -42,7 +42,7 @@ func TestSewagePumpingStationHandleChecksIfStateHasUpdatedOnExisting(t *testing.
 	is.NoErr(err)
 
 	//update value on state
-	msg.State.State_ = true
+	msg.DigitalInput.State_ = true
 
 	//call New and Handle again with new value
 	sp2 := New()
@@ -62,7 +62,7 @@ func TestSewagePumpingStationHandleChecksIfAlertCloses(t *testing.T) {
 	is.NoErr(err)
 
 	//update value on state
-	msg.State.State_ = false
+	msg.DigitalInput.State_ = false
 
 	//call New and Handle again with new value
 	sp2 := New()
@@ -97,8 +97,8 @@ func testSetup(t *testing.T, msgID string, state bool) (*is.I, *database.Storage
 
 	msg := events.FunctionUpdated{
 		ID:   msgID,
-		Type: "state",
-		State: struct {
+		Type: "digitalinput",
+		DigitalInput: struct {
 			Timestamp string "json:\"timestamp\""
 			State_    bool   "json:\"state\""
 		}{

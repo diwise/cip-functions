@@ -57,14 +57,14 @@ func (sp *IncomingSewagePumpingStation) Handle(ctx context.Context, msg *events.
 
 	log := logging.GetFromContext(ctx)
 
-	if msg.Type != "state" {
+	if msg.Type != "digitalinput" {
 		log.Info("invalid function type", "id", msg.ID, "type", msg.Type, "sub_type", msg.SubType)
 		return nil
 	}
 
 	id := msg.ID
 
-	timestamp, err := time.Parse(time.RFC3339, msg.State.Timestamp)
+	timestamp, err := time.Parse(time.RFC3339, msg.DigitalInput.Timestamp)
 	if err != nil {
 		log.Error("failed to parse time from state", "id", id, "msg", err)
 	}
@@ -73,7 +73,7 @@ func (sp *IncomingSewagePumpingStation) Handle(ctx context.Context, msg *events.
 	if !exists {
 		spo := SewagePumpingStation{
 			ID:         id,
-			State:      msg.State.State_,
+			State:      msg.DigitalInput.State_,
 			Tenant:     msg.Tenant,
 			ObservedAt: &timestamp,
 		}
@@ -99,7 +99,7 @@ func (sp *IncomingSewagePumpingStation) Handle(ctx context.Context, msg *events.
 			return err
 		}
 
-		spo.State = msg.State.State_
+		spo.State = msg.DigitalInput.State_
 
 		spo.ObservedAt = &timestamp
 
