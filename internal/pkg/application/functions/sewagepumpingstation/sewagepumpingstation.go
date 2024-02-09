@@ -17,25 +17,17 @@ import (
 const FunctionName string = "sewagepumpingstation"
 
 type IncomingSewagePumpingStation struct {
-	ID     string `json:"id"`
-	Type   string `json:"type"`
-	State  bool   `json:"state"`
-	Tenant string `json:"tenant"`
-
-	StartTime *time.Time `json:"startTime,omitempty"`
-	EndTime   *time.Time `json:"endTime,omitempty"`
-
+	ID         string     `json:"id"`
+	Type       string     `json:"type"`
+	State      bool       `json:"state"`
+	Tenant     string     `json:"tenant"`
 	ObservedAt *time.Time `json:"observedAt"`
 }
 
 type SewagePumpingStation struct {
-	ID     string `json:"id"`
-	State  bool   `json:"state"`
-	Tenant string `json:"tenant"`
-
-	StartTime *time.Time `json:"startTime,omitempty"`
-	EndTime   *time.Time `json:"endTime,omitempty"`
-
+	ID         string     `json:"id"`
+	State      bool       `json:"state"`
+	Tenant     string     `json:"tenant"`
 	ObservedAt *time.Time `json:"observedAt"`
 }
 
@@ -65,33 +57,25 @@ func (sp *IncomingSewagePumpingStation) Handle(ctx context.Context, msg *events.
 
 	log := logging.GetFromContext(ctx)
 
-	if msg.Type != "stopwatch" {
+	if msg.Type != "digitalinput" {
 		log.Info("invalid function type", "id", msg.ID, "type", msg.Type, "sub_type", msg.SubType)
 		return nil
 	}
 
 	id := msg.ID
 
+	timestamp, err := time.Parse(time.RFC3339, msg.DigitalInput.Timestamp)
+	if err != nil {
+		log.Error("failed to parse time from state", "id", id, "msg", err)
+	}
+
 	exists := storage.Exists(ctx, id)
 	if !exists {
 		spo := SewagePumpingStation{
 			ID:         id,
-			State:      msg.Stopwatch.State,
+			State:      msg.DigitalInput.State,
 			Tenant:     msg.Tenant,
-			ObservedAt: &msg.Timestamp,
-		}
-
-		if msg.Stopwatch.State {
-			if msg.Stopwatch.StartTime.IsZero() {
-				log.Error("invalid stopwatch message", "id", msg.ID, "msg", "state is true, but stopwatch does not have a start time")
-				return nil
-			}
-
-			spo.StartTime = &msg.Stopwatch.StartTime
-		} else {
-			if !msg.Stopwatch.StartTime.IsZero() {
-				spo.StartTime = &msg.Stopwatch.StartTime
-			}
+			ObservedAt: &timestamp,
 		}
 
 		err := storage.Create(ctx, id, spo)
@@ -114,53 +98,19 @@ func (sp *IncomingSewagePumpingStation) Handle(ctx context.Context, msg *events.
 			log.Error("could not retrieve sewagepumpingstation from storage", "id", id, "msg", err)
 			return err
 		}
-		if spo.State != msg.Stopwatch.State {
-			if msg.Stopwatch.State {
-				spo.State = msg.Stopwatch.State
 
-				if msg.Stopwatch.StartTime.IsZero() {
-					log.Error("invalid stopwatch message", "id", msg.ID, "msg", "state is true, but stopwatch does not have a start time")
-					return nil
-				}
+		spo.State = msg.DigitalInput.State
 
-				spo.StartTime = &msg.Stopwatch.StartTime
-				spo.ObservedAt = &msg.Timestamp
+		spo.ObservedAt = &timestamp
 
-				storage.Update(ctx, id, spo)
+		storage.Update(ctx, id, spo)
 
-				err = msgCtx.PublishOnTopic(ctx, spo)
-				if err != nil {
-					return fmt.Errorf("failed to publish updated sewagepumpingstation message: %s", err)
-				}
-				log.Info("published message", "id", spo.ID, "topic", spo.TopicName())
-
-			} else {
-				spo.State = msg.Stopwatch.State
-
-				spo.ObservedAt = &msg.Timestamp
-
-				if spo.EndTime != nil && msg.Stopwatch.StopTime != nil {
-					spo.EndTime = msg.Stopwatch.StopTime
-				}
-
-				storage.Update(ctx, id, spo)
-
-				err = msgCtx.PublishOnTopic(ctx, spo)
-				if err != nil {
-					return fmt.Errorf("failed to publish updated sewagepumpingstation message: %s", err)
-				}
-				log.Info("published message", "id", spo.ID, "topic", spo.TopicName())
-			}
-		} else if spo.State == msg.Stopwatch.State {
-			spo.ObservedAt = &msg.Timestamp
-			storage.Update(ctx, id, spo)
-
-			err = msgCtx.PublishOnTopic(ctx, spo)
-			if err != nil {
-				return fmt.Errorf("failed to publish updated sewagepumpingstation message: %s", err)
-			}
-			log.Info("published message", "id", spo.ID, "topic", spo.TopicName())
+		err = msgCtx.PublishOnTopic(ctx, spo)
+		if err != nil {
+			return fmt.Errorf("failed to publish updated sewagepumpingstation message: %s", err)
 		}
+		log.Info("published message", "id", spo.ID, "topic", spo.TopicName())
+
 	}
 
 	return nil

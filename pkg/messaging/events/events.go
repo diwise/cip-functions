@@ -20,6 +20,11 @@ type FunctionUpdated struct {
 	Building     buildings.Building          `json:"building,omitempty"`
 	AirQuality   airquality.AirQuality       `json:"AirQuality,omitempty"`*/
 
+	DigitalInput struct {
+		Timestamp string `json:"timestamp"`
+		State     bool   `json:"state"`
+	} `json:"digitalinput,omitempty"`
+
 	Stopwatch struct {
 		Count          int32          `json:"count"`
 		CumulativeTime time.Duration  `json:"cumulativeTime"`
