@@ -22,7 +22,7 @@ type FunctionUpdated struct {
 
 	DigitalInput struct {
 		Timestamp string `json:"timestamp"`
-		State_    bool   `json:"state"`
+		State     bool   `json:"state"`
 	} `json:"digitalinput,omitempty"`
 
 	Stopwatch struct {

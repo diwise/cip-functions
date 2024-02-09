@@ -73,7 +73,7 @@ func (sp *IncomingSewagePumpingStation) Handle(ctx context.Context, msg *events.
 	if !exists {
 		spo := SewagePumpingStation{
 			ID:         id,
-			State:      msg.DigitalInput.State_,
+			State:      msg.DigitalInput.State,
 			Tenant:     msg.Tenant,
 			ObservedAt: &timestamp,
 		}
@@ -99,7 +99,7 @@ func (sp *IncomingSewagePumpingStation) Handle(ctx context.Context, msg *events.
 			return err
 		}
 
-		spo.State = msg.DigitalInput.State_
+		spo.State = msg.DigitalInput.State
 
 		spo.ObservedAt = &timestamp
 
