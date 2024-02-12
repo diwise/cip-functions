@@ -13,7 +13,7 @@ import (
 	"github.com/matryer/is"
 )
 
-func TestXxx(t *testing.T) {
+func TestThatFunctionUpdatedFindsAndUpdatesExistingDigitalInput(t *testing.T) {
 	is, ctx, msgCtx, db := testSetup(t)
 
 	fnReg, err := functions.NewRegistry(ctx, bytes.NewBufferString(input))
@@ -24,8 +24,8 @@ func TestXxx(t *testing.T) {
 	timestamp := time.Now()
 
 	msg := events.FunctionUpdated{
-		ID:        "stopwatch:002",
-		Type:      "stopwatch",
+		ID:        "digitalinput:002",
+		Type:      "digitalinput",
 		Timestamp: timestamp,
 		Stopwatch: struct {
 			Count          int32          "json:\"count\""
@@ -65,7 +65,7 @@ func testSetup(t *testing.T) (*is.I, context.Context, *messaging.MsgContextMock,
 			return nil
 		},
 		ExistsFunc: func(ctx context.Context, id string) bool {
-			return id == "stopwatch:002"
+			return id == "digitalinput:002"
 		},
 		SelectFunc: func(ctx context.Context, id string) (any, error) {
 			return nil, nil
@@ -78,4 +78,4 @@ func testSetup(t *testing.T) (*is.I, context.Context, *messaging.MsgContextMock,
 const input string = `iot-functionID;cip-function_type;arguments
 fnID:001;combinedsewageoverflow;
 fnID:002;combinedsewageoverflow;cipID=abc,max=100,min=0
-stopwatch:002;sewagepumpingstation;`
+digitalinput:002;sewagepumpingstation;`
