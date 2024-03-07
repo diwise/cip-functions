@@ -38,7 +38,7 @@ func (wc *WasteContainer) Handle(ctx context.Context, itm messaging.IncomingTopi
 	return nil
 }
 
-func RegisterTopicMessageHandler(msgCtx messaging.MsgContext, tc client.ThingsClient, s storage.Storage) error {
+func RegisterMessageHandler(msgCtx messaging.MsgContext, tc client.ThingsClient, s storage.Storage) error {
 	return msgCtx.RegisterTopicMessageHandlerWithFilter("function.updated", newLevelMessageHandler(msgCtx, tc, s), func(m messaging.Message) bool {
 		return strings.HasPrefix(m.ContentType(), "application/vnd.diwise.level")
 	})
