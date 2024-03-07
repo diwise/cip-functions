@@ -13,7 +13,7 @@ import (
 )
 
 type WasteContainer struct {
-	ID string `json:"id"`
+	ID   string `json:"id"`
 	Type string `json:"type"`
 }
 
@@ -51,9 +51,7 @@ func newLevelMessageHandler(msgCtx messaging.MsgContext, tc client.ThingsClient,
 		log := logging.GetFromContext(ctx)
 
 		f := struct {
-			ID      *string `json:"id,omitempty"`
-			Type    *string `json:"type,omitempty"`
-			SubType *string `json:"subType,omitempty"`
+			ID *string `json:"id,omitempty"`
 		}{}
 
 		err = json.Unmarshal(itm.Body(), &f)
