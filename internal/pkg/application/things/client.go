@@ -48,6 +48,22 @@ func NewThingsClient(ctx context.Context, url, oauthTokenURL, oauthClientID, oau
 	}, nil
 }
 
+func GetThing[T any](ctx context.Context, tc ThingsClient, thingID string) (T, error) {
+	t := new(T)
+
+	response, err := tc.findByID(ctx, thingID)
+	if err != nil {
+		return *t, err
+	}
+
+	err = json.Unmarshal(response.Data, &t)
+	if err != nil {
+		return *t, err
+	}
+
+	return *t, nil
+}
+
 func (tc ThingsClient) FindRelatedThings(ctx context.Context, thingID string) ([]Thing, error) {
 	jar, err := tc.findByID(ctx, thingID)
 	if err != nil {
