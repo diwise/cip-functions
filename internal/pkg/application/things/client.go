@@ -83,7 +83,7 @@ func (tc ThingsClient) findByID(ctx context.Context, thingID string) (*JsonApiRe
 
 	resp, err := tc.httpClient.Do(req)
 	if err != nil {
-		err = fmt.Errorf("failed to retrieve device information from devEUI: %w", err)
+		err = fmt.Errorf("failed to retrieve thing: %w", err)
 		return nil, err
 	}
 	defer resp.Body.Close()
