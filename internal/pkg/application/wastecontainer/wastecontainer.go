@@ -12,25 +12,25 @@ import (
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
 )
 
-type WasteContainerState struct {
+type WasteContainer struct {
 	ID string `json:"id"`
 	Type string `json:"type"`
 }
 
-func (sp WasteContainerState) TopicName() string {
+func (sp WasteContainer) TopicName() string {
 	return "cip-function.updated"
 }
 
-func (sp WasteContainerState) ContentType() string {
+func (sp WasteContainer) ContentType() string {
 	return "application/vnd.diwise.wastecontainer+json"
 }
 
-func (sp WasteContainerState) Body() []byte {
+func (sp WasteContainer) Body() []byte {
 	b, _ := json.Marshal(sp)
 	return b
 }
 
-func (wc *WasteContainerState) Handle(ctx context.Context, itm messaging.IncomingTopicMessage) error {
+func (wc *WasteContainer) Handle(ctx context.Context, itm messaging.IncomingTopicMessage) error {
 
 	//TODO: read level info
 	//		update state
@@ -82,25 +82,25 @@ func newLevelMessageHandler(msgCtx messaging.MsgContext, tc client.ThingsClient,
 			return
 		}
 
-		state, err := storage.GetOrDefault(ctx, s, wasteContainerId, WasteContainerState{ID: wasteContainerId, Type: "WasteContainer"})
+		wc, err := storage.GetOrDefault(ctx, s, wasteContainerId, WasteContainer{ID: wasteContainerId, Type: "WasteContainer"})
 		if err != nil {
 			log.Error("could not get current state for wastecontainer", "wastecontainer_id", wasteContainerId, "err", err.Error())
 			return
 		}
 
-		err = state.Handle(ctx, itm)
+		err = wc.Handle(ctx, itm)
 		if err != nil {
 			log.Error("could not handle incommig message", "err", err.Error())
 			return
 		}
 
-		err = storage.CreateOrUpdate(ctx, s, state.ID, state)
+		err = storage.CreateOrUpdate(ctx, s, wc.ID, wc)
 		if err != nil {
 			log.Error("could not store state", "err", err.Error())
 			return
 		}
 
-		err = msgCtx.PublishOnTopic(ctx, state)
+		err = msgCtx.PublishOnTopic(ctx, wc)
 		if err != nil {
 			log.Error("could not publish message", "err", err.Error())
 			return
