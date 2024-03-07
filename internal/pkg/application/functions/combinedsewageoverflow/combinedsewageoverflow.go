@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/diwise/cip-functions/internal/pkg/application/functions/options"
-	"github.com/diwise/cip-functions/internal/pkg/infrastructure/database"
+	"github.com/diwise/cip-functions/internal/pkg/infrastructure/storage"
 	"github.com/diwise/cip-functions/pkg/messaging/events"
 	"github.com/diwise/cip-functions/pkg/messaging/topics"
 	"github.com/diwise/messaging-golang/pkg/messaging"
@@ -41,7 +41,7 @@ type Point struct {
 	Lon float64 `json:"lon"`
 }
 
-func (s *SewageOverflow) Handle(ctx context.Context, msg *events.FunctionUpdated, storage database.Storage, msgCtx messaging.MsgContext, opts ...options.Option) error {
+func (s *SewageOverflow) Handle(ctx context.Context, msg *events.FunctionUpdated, store storage.Storage, msgCtx messaging.MsgContext, opts ...options.Option) error {
 	var err error
 
 	log := logging.GetFromContext(ctx)
@@ -51,7 +51,7 @@ func (s *SewageOverflow) Handle(ctx context.Context, msg *events.FunctionUpdated
 		return nil
 	}
 
-	current, err := database.GetOrDefault[SewageOverflow](ctx, storage, msg.ID, SewageOverflow{
+	current, err := storage.GetOrDefault[SewageOverflow](ctx, store, msg.ID, SewageOverflow{
 		ID:    msg.ID,
 		State: false,
 		Location: Point{
@@ -68,7 +68,7 @@ func (s *SewageOverflow) Handle(ctx context.Context, msg *events.FunctionUpdated
 		current.State = msg.Stopwatch.State
 
 		id := fmt.Sprintf("sewageoverflowobserved:%s:%d", msg.ID, msg.Stopwatch.StartTime.Unix())
-		observation, err := database.GetOrDefault[SewageOverflowObserved](ctx, storage, id, SewageOverflowObserved{})
+		observation, err := storage.GetOrDefault[SewageOverflowObserved](ctx, store, id, SewageOverflowObserved{})
 		if err != nil {
 			return err
 		}
@@ -83,7 +83,7 @@ func (s *SewageOverflow) Handle(ctx context.Context, msg *events.FunctionUpdated
 				Timestamp: time.Now().UTC(),
 			}
 
-			err = storage.Create(ctx, observation.ID, observation)
+			err = store.Create(ctx, observation.ID, observation)
 			if err != nil {
 				return err
 			}
@@ -97,7 +97,7 @@ func (s *SewageOverflow) Handle(ctx context.Context, msg *events.FunctionUpdated
 			observation.State = msg.Stopwatch.State
 			observation.Timestamp = time.Now().UTC()
 
-			err = storage.Update(ctx, observation.ID, observation)
+			err = store.Update(ctx, observation.ID, observation)
 			if err != nil {
 				return err
 			}
@@ -109,7 +109,7 @@ func (s *SewageOverflow) Handle(ctx context.Context, msg *events.FunctionUpdated
 		}
 	}
 
-	return database.CreateOrUpdate[SewageOverflow](ctx, storage, current.ID, current)
+	return storage.CreateOrUpdate[SewageOverflow](ctx, store, current.ID, current)
 }
 
 func (s SewageOverflowObserved) Body() []byte {

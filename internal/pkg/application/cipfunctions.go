@@ -5,7 +5,7 @@ import (
 	"errors"
 
 	"github.com/diwise/cip-functions/internal/pkg/application/functions"
-	"github.com/diwise/cip-functions/internal/pkg/infrastructure/database"
+	"github.com/diwise/cip-functions/internal/pkg/infrastructure/storage"
 	"github.com/diwise/cip-functions/pkg/messaging/events"
 	"github.com/diwise/messaging-golang/pkg/messaging"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
@@ -18,11 +18,11 @@ type App interface {
 
 type app struct {
 	fnRegistry functions.Registry
-	storage    database.Storage
+	storage    storage.Storage
 	msgCtx     messaging.MsgContext
 }
 
-func New(s database.Storage, m messaging.MsgContext, r functions.Registry) App {
+func New(s storage.Storage, m messaging.MsgContext, r functions.Registry) App {
 	return &app{
 		fnRegistry: r,
 		storage:    s,

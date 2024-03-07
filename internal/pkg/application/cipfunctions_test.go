@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/diwise/cip-functions/internal/pkg/application/functions"
-	"github.com/diwise/cip-functions/internal/pkg/infrastructure/database"
+	"github.com/diwise/cip-functions/internal/pkg/infrastructure/storage"
 	"github.com/diwise/cip-functions/pkg/messaging/events"
 	"github.com/diwise/messaging-golang/pkg/messaging"
 	"github.com/matryer/is"
@@ -48,7 +48,7 @@ func TestThatFunctionUpdatedFindsAndUpdatesExistingDigitalInput(t *testing.T) {
 	is.Equal(len(msgCtx.PublishOnTopicCalls()), 1)
 }
 
-func testSetup(t *testing.T) (*is.I, context.Context, *messaging.MsgContextMock, *database.StorageMock) {
+func testSetup(t *testing.T) (*is.I, context.Context, *messaging.MsgContextMock, *storage.StorageMock) {
 	is := is.New(t)
 	ctx := context.Background()
 	msgCtx := &messaging.MsgContextMock{
@@ -57,7 +57,7 @@ func testSetup(t *testing.T) (*is.I, context.Context, *messaging.MsgContextMock,
 		},
 	}
 
-	db := &database.StorageMock{
+	db := &storage.StorageMock{
 		CreateFunc: func(ctx context.Context, id string, value any) error {
 			return nil
 		},
