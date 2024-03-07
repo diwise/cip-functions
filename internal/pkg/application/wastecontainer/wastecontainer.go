@@ -16,6 +16,27 @@ import (
 	"github.com/farshidtz/senml/v2"
 )
 
+func RegisterMessageHandlers(msgCtx messaging.MsgContext, tc client.ThingsClient, s storage.Storage) error {
+	var err error
+	var errs []error
+
+	err = msgCtx.RegisterTopicMessageHandlerWithFilter("function.updated", newLevelMessageHandler(msgCtx, tc, s), func(m messaging.Message) bool {
+		return strings.HasPrefix(m.ContentType(), "application/vnd.diwise.level")
+	})
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	err = msgCtx.RegisterTopicMessageHandlerWithFilter("message.accepted", newTemperatureMessageHandler(msgCtx, tc, s), func(m messaging.Message) bool {
+		return strings.HasPrefix(m.ContentType(), "application/vnd.oma.lwm2m.ext.3303")
+	})
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	return errors.Join(errs...)
+}
+
 type WasteContainer struct {
 	ID           string    `json:"id"`
 	Type         string    `json:"type"`
@@ -67,7 +88,7 @@ func (wc *WasteContainer) Handle(ctx context.Context, itm messaging.IncomingTopi
 		c.Normalize()
 		for _, r := range c {
 			if strings.HasSuffix(r.Name, "/5700") {
-				return time.Unix(int64(r.Time),0), true
+				return time.Unix(int64(r.Time), 0), true
 			}
 		}
 		return time.Time{}, false
@@ -85,27 +106,6 @@ func (wc *WasteContainer) Handle(ctx context.Context, itm messaging.IncomingTopi
 	}
 
 	return nil
-}
-
-func RegisterMessageHandlers(msgCtx messaging.MsgContext, tc client.ThingsClient, s storage.Storage) error {
-	var err error
-	var errs []error
-
-	err = msgCtx.RegisterTopicMessageHandlerWithFilter("function.updated", newLevelMessageHandler(msgCtx, tc, s), func(m messaging.Message) bool {
-		return strings.HasPrefix(m.ContentType(), "application/vnd.diwise.level")
-	})
-	if err != nil {
-		errs = append(errs, err)
-	}
-
-	err = msgCtx.RegisterTopicMessageHandlerWithFilter("message.accepted", newTemperatureMessageHandler(msgCtx, tc, s), func(m messaging.Message) bool {
-		return strings.HasPrefix(m.ContentType(), "application/vnd.oma.lwm2m.ext.3303")
-	})
-	if err != nil {
-		errs = append(errs, err)
-	}
-
-	return errors.Join(errs...)
 }
 
 func newTemperatureMessageHandler(msgCtx messaging.MsgContext, tc client.ThingsClient, s storage.Storage) messaging.TopicMessageHandler {
