@@ -46,16 +46,16 @@ type WasteContainer struct {
 	DateObserved time.Time `json:"dateObserved"`
 }
 
-func (sp WasteContainer) TopicName() string {
+func (wc WasteContainer) TopicName() string {
 	return "cip-function.updated"
 }
 
-func (sp WasteContainer) ContentType() string {
+func (wc WasteContainer) ContentType() string {
 	return "application/vnd.diwise.wastecontainer+json"
 }
 
-func (sp WasteContainer) Body() []byte {
-	b, _ := json.Marshal(sp)
+func (wc WasteContainer) Body() []byte {
+	b, _ := json.Marshal(wc)
 	return b
 }
 
