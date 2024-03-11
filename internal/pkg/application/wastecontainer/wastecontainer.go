@@ -6,17 +6,18 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 	"strings"
 	"time"
 
-	client "github.com/diwise/cip-functions/internal/pkg/application/things"
+	"github.com/diwise/cip-functions/internal/pkg/application/things"
 	"github.com/diwise/cip-functions/internal/pkg/infrastructure/storage"
 	"github.com/diwise/messaging-golang/pkg/messaging"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
 	"github.com/farshidtz/senml/v2"
 )
 
-func RegisterMessageHandlers(msgCtx messaging.MsgContext, tc client.ThingsClient, s storage.Storage) error {
+func RegisterMessageHandlers(msgCtx messaging.MsgContext, tc things.Client, s storage.Storage) error {
 	var err error
 	var errs []error
 
@@ -108,23 +109,22 @@ func (wc *WasteContainer) Handle(ctx context.Context, itm messaging.IncomingTopi
 	return nil
 }
 
-func newTemperatureMessageHandler(msgCtx messaging.MsgContext, tc client.ThingsClient, s storage.Storage) messaging.TopicMessageHandler {
-	return func(ctx context.Context, itm messaging.IncomingTopicMessage, l *slog.Logger) {
+func newTemperatureMessageHandler(msgCtx messaging.MsgContext, tc things.Client, s storage.Storage) messaging.TopicMessageHandler {
+	return func(ctx context.Context, itm messaging.IncomingTopicMessage, log *slog.Logger) {
 		var err error
-		log := logging.GetFromContext(ctx)
 
 		m := struct {
 			Pack      senml.Pack `json:"pack"`
 			Timestamp time.Time  `json:"timestamp"`
 		}{}
 
-		deviceID := func(p senml.Pack) string {
+		getDeviceID := func(p senml.Pack) (string, bool) {
 			if p[0].Name != "0" {
-				return ""
+				return "", false
 			}
 			parts := strings.Split(p[0].BaseName, "/")
 
-			return parts[0]
+			return parts[0], true
 		}
 
 		err = json.Unmarshal(itm.Body(), &m)
@@ -133,12 +133,15 @@ func newTemperatureMessageHandler(msgCtx messaging.MsgContext, tc client.ThingsC
 			return
 		}
 
-		if deviceID(m.Pack) == "" {
+		var deviceID string
+		var ok bool = false
+
+		if deviceID, ok = getDeviceID(m.Pack); !ok {
 			log.Error("pack contains no deviceID")
 			return
 		}
 
-		things, err := tc.FindRelatedThings(ctx, deviceID(m.Pack))
+		things, err := tc.FindRelatedThings(ctx, deviceID)
 		if err != nil {
 			log.Error("could not query for things", "err", err.Error())
 			return
@@ -157,11 +160,9 @@ func newTemperatureMessageHandler(msgCtx messaging.MsgContext, tc client.ThingsC
 	}
 }
 
-func newLevelMessageHandler(msgCtx messaging.MsgContext, tc client.ThingsClient, s storage.Storage) messaging.TopicMessageHandler {
-	return func(ctx context.Context, itm messaging.IncomingTopicMessage, l *slog.Logger) {
+func newLevelMessageHandler(msgCtx messaging.MsgContext, tc things.Client, s storage.Storage) messaging.TopicMessageHandler {
+	return func(ctx context.Context, itm messaging.IncomingTopicMessage, log *slog.Logger) {
 		var err error
-
-		log := logging.GetFromContext(ctx)
 
 		f := struct {
 			ID string `json:"id,omitempty"`
@@ -192,7 +193,7 @@ func newLevelMessageHandler(msgCtx messaging.MsgContext, tc client.ThingsClient,
 	}
 }
 
-func process(ctx context.Context, msgCtx messaging.MsgContext, itm messaging.IncomingTopicMessage, s storage.Storage, things []client.Thing) error {
+func process(ctx context.Context, msgCtx messaging.MsgContext, itm messaging.IncomingTopicMessage, s storage.Storage, things []things.Thing) error {
 	log := logging.GetFromContext(ctx)
 
 	wasteContainerId, hasWasteContainer := containsWasteContainer(things)
@@ -202,7 +203,7 @@ func process(ctx context.Context, msgCtx messaging.MsgContext, itm messaging.Inc
 
 	wc, err := storage.GetOrDefault(ctx, s, wasteContainerId, WasteContainer{ID: wasteContainerId, Type: "WasteContainer"})
 	if err != nil {
-		log.Error("could not get current state for wastecontainer", "wastecontainer_id", wasteContainerId, "err", err.Error())
+		log.Error("could not get or create current state for wastecontainer", "wastecontainer_id", wasteContainerId, "err", err.Error())
 		return err
 	}
 
@@ -227,13 +228,16 @@ func process(ctx context.Context, msgCtx messaging.MsgContext, itm messaging.Inc
 	return nil
 }
 
-func containsWasteContainer(things []client.Thing) (string, bool) {
-	for _, t := range things {
-		if strings.EqualFold(t.Type, "WasteContainer") {
-			return t.Id, true
-		}
+func containsWasteContainer(ts []things.Thing) (string, bool) {
+	idx := slices.IndexFunc(ts, func(t things.Thing) bool {
+		return strings.EqualFold(t.Type, "WasteContainer")
+	})
+
+	if idx == -1 {
+		return "", false
 	}
-	return "", false
+
+	return ts[idx].Id, true
 }
 
 type msg struct {

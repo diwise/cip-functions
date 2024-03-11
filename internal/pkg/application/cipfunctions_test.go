@@ -67,7 +67,7 @@ func testSetup(t *testing.T) (*is.I, context.Context, *messaging.MsgContextMock,
 		ExistsFunc: func(ctx context.Context, id string) bool {
 			return id == "digitalinput:002"
 		},
-		SelectFunc: func(ctx context.Context, id string) (any, error) {
+		ReadFunc: func(ctx context.Context, id string) (any, error) {
 			return nil, nil
 		},
 	}

@@ -53,21 +53,21 @@ func Connect(ctx context.Context, cfg Config) (*JsonDataStore, error) {
 	}, nil
 }
 
-func (i *JsonDataStore) Close() {
-	i.db.Close()
+func (jds *JsonDataStore) Close() {
+	jds.db.Close()
 }
 
-func (i *JsonDataStore) Initialize(ctx context.Context) error {
-	return i.createTables(ctx)
+func (jds *JsonDataStore) Initialize(ctx context.Context) error {
+	return jds.createTables(ctx)
 }
 
-func (i *JsonDataStore) Create(ctx context.Context, id string, value any) error {
+func (jds *JsonDataStore) Create(ctx context.Context, id string, value any) error {
 	b, err := json.Marshal(value)
 	if err != nil {
 		return err
 	}
 
-	_, err = i.db.Exec(ctx, `insert into cip_fnct (id, data) values ($1, $2)`, id, string(b))
+	_, err = jds.db.Exec(ctx, `insert into cip_fnct (id, data) values ($1, $2)`, id, string(b))
 	if err != nil {
 		return err
 	}
@@ -75,13 +75,13 @@ func (i *JsonDataStore) Create(ctx context.Context, id string, value any) error 
 	return nil
 }
 
-func (i *JsonDataStore) Remove(ctx context.Context, id string) error {
-	_, err := i.db.Exec(ctx, `delete from cip_fnct where id = $1`, id)
+func (jds *JsonDataStore) Delete(ctx context.Context, id string) error {
+	_, err := jds.db.Exec(ctx, `delete from cip_fnct where id = $1`, id)
 	if err != nil {
 		return err
 	}
 
-	_, err = i.db.Exec(ctx, `delete from cip_fnct_values where cip_fnct_id = $1`, id)
+	_, err = jds.db.Exec(ctx, `delete from cip_fnct_values where cip_fnct_id = $1`, id)
 	if err != nil {
 		return err
 	}
@@ -89,13 +89,13 @@ func (i *JsonDataStore) Remove(ctx context.Context, id string) error {
 	return nil
 }
 
-func (i *JsonDataStore) Update(ctx context.Context, id string, value any) error {
+func (jds *JsonDataStore) Update(ctx context.Context, id string, value any) error {
 	b, err := json.Marshal(value)
 	if err != nil {
 		return err
 	}
 
-	_, err = i.db.Exec(ctx, `update cip_fnct set data = $2 where id = $1`, id, string(b))
+	_, err = jds.db.Exec(ctx, `update cip_fnct set data = $2 where id = $1`, id, string(b))
 	if err != nil {
 		return err
 	}
@@ -103,11 +103,10 @@ func (i *JsonDataStore) Update(ctx context.Context, id string, value any) error 
 	return nil
 }
 
-func (i *JsonDataStore) Select(ctx context.Context, id string) (any, error) {
-	row := i.db.QueryRow(ctx, `select data from cip_fnct where id = $1`, id)
-
+func (jds *JsonDataStore) Read(ctx context.Context, id string) (any, error) {	
 	var obj any
-	err := row.Scan(&obj)
+	
+	err := jds.db.QueryRow(ctx, `select data from cip_fnct where id = $1`, id).Scan(&obj)		
 	if err != nil {
 		return nil, err
 	}
@@ -115,9 +114,9 @@ func (i *JsonDataStore) Select(ctx context.Context, id string) (any, error) {
 	return obj, nil
 }
 
-func (i *JsonDataStore) Exists(ctx context.Context, id string) bool {
+func (jds *JsonDataStore) Exists(ctx context.Context, id string) bool {
 	var n int32
-	err := i.db.QueryRow(ctx, `select count(*) from cip_fnct where id = $1`, id).Scan(&n)
+	err := jds.db.QueryRow(ctx, `select count(*) from cip_fnct where id = $1`, id).Scan(&n)
 	if err != nil {
 		return false
 	}
@@ -125,7 +124,7 @@ func (i *JsonDataStore) Exists(ctx context.Context, id string) bool {
 	return n > 0
 }
 
-func (i *JsonDataStore) createTables(ctx context.Context) error {
+func (jds *JsonDataStore) createTables(ctx context.Context) error {
 	ddl := `
 		CREATE TABLE IF NOT EXISTS cip_fnct (
 			id 		  TEXT PRIMARY KEY NOT NULL,
@@ -141,7 +140,7 @@ func (i *JsonDataStore) createTables(ctx context.Context) error {
 			value_bool 		BOOLEAN NULL
 		);`
 
-	tx, err := i.db.Begin(ctx)
+	tx, err := jds.db.Begin(ctx)
 	if err != nil {
 		return err
 	}

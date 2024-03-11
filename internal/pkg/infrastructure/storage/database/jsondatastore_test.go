@@ -50,15 +50,10 @@ func TestSelect(t *testing.T) {
 	}{"John", 30})
 	is.NoErr(err)
 
-	v, err := s.Select(ctx, id)
+	v, err := s.Read(ctx, id)
 	is.NoErr(err)
 
 	is.True(v != nil)
-}
-
-type testStruct struct {
-	Name string
-	Age  int
 }
 
 func testSetup(t *testing.T) (*is.I, *JsonDataStore, context.Context, bool, error) {

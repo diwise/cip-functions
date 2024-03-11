@@ -122,7 +122,7 @@ func testSetup(t *testing.T, msgID string, state bool) (*is.I, *storage.StorageM
 		UpdateFunc: func(ctx context.Context, id string, value any) error {
 			return nil
 		},
-		SelectFunc: func(ctx context.Context, id string) (any, error) {
+		ReadFunc: func(ctx context.Context, id string) (any, error) {
 			return SewagePumpingStation{
 				ID:    id,
 				State: state,

@@ -14,19 +14,19 @@ var _ Registry = &RegistryMock{}
 
 // RegistryMock is a mock implementation of Registry.
 //
-// 	func TestSomethingThatUsesRegistry(t *testing.T) {
+//	func TestSomethingThatUsesRegistry(t *testing.T) {
 //
-// 		// make and configure a mocked Registry
-// 		mockedRegistry := &RegistryMock{
-// 			FindFunc: func(ctx context.Context, matchers ...RegistryMatcherFunc) ([]RegistryItem, error) {
-// 				panic("mock out the Find method")
-// 			},
-// 		}
+//		// make and configure a mocked Registry
+//		mockedRegistry := &RegistryMock{
+//			FindFunc: func(ctx context.Context, matchers ...RegistryMatcherFunc) ([]RegistryItem, error) {
+//				panic("mock out the Find method")
+//			},
+//		}
 //
-// 		// use mockedRegistry in code that requires Registry
-// 		// and then make assertions.
+//		// use mockedRegistry in code that requires Registry
+//		// and then make assertions.
 //
-// 	}
+//	}
 type RegistryMock struct {
 	// FindFunc mocks the Find method.
 	FindFunc func(ctx context.Context, matchers ...RegistryMatcherFunc) ([]RegistryItem, error)
@@ -64,7 +64,8 @@ func (mock *RegistryMock) Find(ctx context.Context, matchers ...RegistryMatcherF
 
 // FindCalls gets all the calls that were made to Find.
 // Check the length with:
-//     len(mockedRegistry.FindCalls())
+//
+//	len(mockedRegistry.FindCalls())
 func (mock *RegistryMock) FindCalls() []struct {
 	Ctx      context.Context
 	Matchers []RegistryMatcherFunc

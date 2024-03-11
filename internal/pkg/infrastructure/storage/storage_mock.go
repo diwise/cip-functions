@@ -18,23 +18,17 @@ var _ Storage = &StorageMock{}
 //
 //		// make and configure a mocked Storage
 //		mockedStorage := &StorageMock{
-//			CloseFunc: func()  {
-//				panic("mock out the Close method")
-//			},
 //			CreateFunc: func(ctx context.Context, id string, value any) error {
 //				panic("mock out the Create method")
+//			},
+//			DeleteFunc: func(ctx context.Context, id string) error {
+//				panic("mock out the Delete method")
 //			},
 //			ExistsFunc: func(ctx context.Context, id string) bool {
 //				panic("mock out the Exists method")
 //			},
-//			InitializeFunc: func(ctx context.Context) error {
-//				panic("mock out the Initialize method")
-//			},
-//			RemoveFunc: func(ctx context.Context, id string) error {
-//				panic("mock out the Remove method")
-//			},
-//			SelectFunc: func(ctx context.Context, id string) (any, error) {
-//				panic("mock out the Select method")
+//			ReadFunc: func(ctx context.Context, id string) (any, error) {
+//				panic("mock out the Read method")
 //			},
 //			UpdateFunc: func(ctx context.Context, id string, value any) error {
 //				panic("mock out the Update method")
@@ -46,32 +40,23 @@ var _ Storage = &StorageMock{}
 //
 //	}
 type StorageMock struct {
-	// CloseFunc mocks the Close method.
-	CloseFunc func()
-
 	// CreateFunc mocks the Create method.
 	CreateFunc func(ctx context.Context, id string, value any) error
+
+	// DeleteFunc mocks the Delete method.
+	DeleteFunc func(ctx context.Context, id string) error
 
 	// ExistsFunc mocks the Exists method.
 	ExistsFunc func(ctx context.Context, id string) bool
 
-	// InitializeFunc mocks the Initialize method.
-	InitializeFunc func(ctx context.Context) error
-
-	// RemoveFunc mocks the Remove method.
-	RemoveFunc func(ctx context.Context, id string) error
-
-	// SelectFunc mocks the Select method.
-	SelectFunc func(ctx context.Context, id string) (any, error)
+	// ReadFunc mocks the Read method.
+	ReadFunc func(ctx context.Context, id string) (any, error)
 
 	// UpdateFunc mocks the Update method.
 	UpdateFunc func(ctx context.Context, id string, value any) error
 
 	// calls tracks calls to the methods.
 	calls struct {
-		// Close holds details about calls to the Close method.
-		Close []struct {
-		}
 		// Create holds details about calls to the Create method.
 		Create []struct {
 			// Ctx is the ctx argument value.
@@ -81,6 +66,13 @@ type StorageMock struct {
 			// Value is the value argument value.
 			Value any
 		}
+		// Delete holds details about calls to the Delete method.
+		Delete []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
+			// ID is the id argument value.
+			ID string
+		}
 		// Exists holds details about calls to the Exists method.
 		Exists []struct {
 			// Ctx is the ctx argument value.
@@ -88,20 +80,8 @@ type StorageMock struct {
 			// ID is the id argument value.
 			ID string
 		}
-		// Initialize holds details about calls to the Initialize method.
-		Initialize []struct {
-			// Ctx is the ctx argument value.
-			Ctx context.Context
-		}
-		// Remove holds details about calls to the Remove method.
-		Remove []struct {
-			// Ctx is the ctx argument value.
-			Ctx context.Context
-			// ID is the id argument value.
-			ID string
-		}
-		// Select holds details about calls to the Select method.
-		Select []struct {
+		// Read holds details about calls to the Read method.
+		Read []struct {
 			// Ctx is the ctx argument value.
 			Ctx context.Context
 			// ID is the id argument value.
@@ -117,40 +97,11 @@ type StorageMock struct {
 			Value any
 		}
 	}
-	lockClose      sync.RWMutex
-	lockCreate     sync.RWMutex
-	lockExists     sync.RWMutex
-	lockInitialize sync.RWMutex
-	lockRemove     sync.RWMutex
-	lockSelect     sync.RWMutex
-	lockUpdate     sync.RWMutex
-}
-
-// Close calls CloseFunc.
-func (mock *StorageMock) Close() {
-	if mock.CloseFunc == nil {
-		panic("StorageMock.CloseFunc: method is nil but Storage.Close was just called")
-	}
-	callInfo := struct {
-	}{}
-	mock.lockClose.Lock()
-	mock.calls.Close = append(mock.calls.Close, callInfo)
-	mock.lockClose.Unlock()
-	mock.CloseFunc()
-}
-
-// CloseCalls gets all the calls that were made to Close.
-// Check the length with:
-//
-//	len(mockedStorage.CloseCalls())
-func (mock *StorageMock) CloseCalls() []struct {
-} {
-	var calls []struct {
-	}
-	mock.lockClose.RLock()
-	calls = mock.calls.Close
-	mock.lockClose.RUnlock()
-	return calls
+	lockCreate sync.RWMutex
+	lockDelete sync.RWMutex
+	lockExists sync.RWMutex
+	lockRead   sync.RWMutex
+	lockUpdate sync.RWMutex
 }
 
 // Create calls CreateFunc.
@@ -193,6 +144,42 @@ func (mock *StorageMock) CreateCalls() []struct {
 	return calls
 }
 
+// Delete calls DeleteFunc.
+func (mock *StorageMock) Delete(ctx context.Context, id string) error {
+	if mock.DeleteFunc == nil {
+		panic("StorageMock.DeleteFunc: method is nil but Storage.Delete was just called")
+	}
+	callInfo := struct {
+		Ctx context.Context
+		ID  string
+	}{
+		Ctx: ctx,
+		ID:  id,
+	}
+	mock.lockDelete.Lock()
+	mock.calls.Delete = append(mock.calls.Delete, callInfo)
+	mock.lockDelete.Unlock()
+	return mock.DeleteFunc(ctx, id)
+}
+
+// DeleteCalls gets all the calls that were made to Delete.
+// Check the length with:
+//
+//	len(mockedStorage.DeleteCalls())
+func (mock *StorageMock) DeleteCalls() []struct {
+	Ctx context.Context
+	ID  string
+} {
+	var calls []struct {
+		Ctx context.Context
+		ID  string
+	}
+	mock.lockDelete.RLock()
+	calls = mock.calls.Delete
+	mock.lockDelete.RUnlock()
+	return calls
+}
+
 // Exists calls ExistsFunc.
 func (mock *StorageMock) Exists(ctx context.Context, id string) bool {
 	if mock.ExistsFunc == nil {
@@ -229,42 +216,10 @@ func (mock *StorageMock) ExistsCalls() []struct {
 	return calls
 }
 
-// Initialize calls InitializeFunc.
-func (mock *StorageMock) Initialize(ctx context.Context) error {
-	if mock.InitializeFunc == nil {
-		panic("StorageMock.InitializeFunc: method is nil but Storage.Initialize was just called")
-	}
-	callInfo := struct {
-		Ctx context.Context
-	}{
-		Ctx: ctx,
-	}
-	mock.lockInitialize.Lock()
-	mock.calls.Initialize = append(mock.calls.Initialize, callInfo)
-	mock.lockInitialize.Unlock()
-	return mock.InitializeFunc(ctx)
-}
-
-// InitializeCalls gets all the calls that were made to Initialize.
-// Check the length with:
-//
-//	len(mockedStorage.InitializeCalls())
-func (mock *StorageMock) InitializeCalls() []struct {
-	Ctx context.Context
-} {
-	var calls []struct {
-		Ctx context.Context
-	}
-	mock.lockInitialize.RLock()
-	calls = mock.calls.Initialize
-	mock.lockInitialize.RUnlock()
-	return calls
-}
-
-// Remove calls RemoveFunc.
-func (mock *StorageMock) Remove(ctx context.Context, id string) error {
-	if mock.RemoveFunc == nil {
-		panic("StorageMock.RemoveFunc: method is nil but Storage.Remove was just called")
+// Read calls ReadFunc.
+func (mock *StorageMock) Read(ctx context.Context, id string) (any, error) {
+	if mock.ReadFunc == nil {
+		panic("StorageMock.ReadFunc: method is nil but Storage.Read was just called")
 	}
 	callInfo := struct {
 		Ctx context.Context
@@ -273,17 +228,17 @@ func (mock *StorageMock) Remove(ctx context.Context, id string) error {
 		Ctx: ctx,
 		ID:  id,
 	}
-	mock.lockRemove.Lock()
-	mock.calls.Remove = append(mock.calls.Remove, callInfo)
-	mock.lockRemove.Unlock()
-	return mock.RemoveFunc(ctx, id)
+	mock.lockRead.Lock()
+	mock.calls.Read = append(mock.calls.Read, callInfo)
+	mock.lockRead.Unlock()
+	return mock.ReadFunc(ctx, id)
 }
 
-// RemoveCalls gets all the calls that were made to Remove.
+// ReadCalls gets all the calls that were made to Read.
 // Check the length with:
 //
-//	len(mockedStorage.RemoveCalls())
-func (mock *StorageMock) RemoveCalls() []struct {
+//	len(mockedStorage.ReadCalls())
+func (mock *StorageMock) ReadCalls() []struct {
 	Ctx context.Context
 	ID  string
 } {
@@ -291,45 +246,9 @@ func (mock *StorageMock) RemoveCalls() []struct {
 		Ctx context.Context
 		ID  string
 	}
-	mock.lockRemove.RLock()
-	calls = mock.calls.Remove
-	mock.lockRemove.RUnlock()
-	return calls
-}
-
-// Select calls SelectFunc.
-func (mock *StorageMock) Select(ctx context.Context, id string) (any, error) {
-	if mock.SelectFunc == nil {
-		panic("StorageMock.SelectFunc: method is nil but Storage.Select was just called")
-	}
-	callInfo := struct {
-		Ctx context.Context
-		ID  string
-	}{
-		Ctx: ctx,
-		ID:  id,
-	}
-	mock.lockSelect.Lock()
-	mock.calls.Select = append(mock.calls.Select, callInfo)
-	mock.lockSelect.Unlock()
-	return mock.SelectFunc(ctx, id)
-}
-
-// SelectCalls gets all the calls that were made to Select.
-// Check the length with:
-//
-//	len(mockedStorage.SelectCalls())
-func (mock *StorageMock) SelectCalls() []struct {
-	Ctx context.Context
-	ID  string
-} {
-	var calls []struct {
-		Ctx context.Context
-		ID  string
-	}
-	mock.lockSelect.RLock()
-	calls = mock.calls.Select
-	mock.lockSelect.RUnlock()
+	mock.lockRead.RLock()
+	calls = mock.calls.Read
+	mock.lockRead.RUnlock()
 	return calls
 }
 

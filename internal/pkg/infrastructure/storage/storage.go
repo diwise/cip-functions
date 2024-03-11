@@ -7,17 +7,15 @@ import (
 
 //go:generate moq -rm -out storage_mock.go . Storage
 type Storage interface {
-	Initialize(ctx context.Context) error
-	Close()
-	Select(ctx context.Context, id string) (any, error)
 	Create(ctx context.Context, id string, value any) error
+	Read(ctx context.Context, id string) (any, error)	
 	Update(ctx context.Context, id string, value any) error
-	Remove(ctx context.Context, id string) error
+	Delete(ctx context.Context, id string) error
 	Exists(ctx context.Context, id string) bool
 }
 
 func Get[T any](ctx context.Context, storage Storage, id string) (T, error) {
-	t1, err := storage.Select(ctx, id)
+	t1, err := storage.Read(ctx, id)
 	if err != nil {
 		return *new(T), err
 	}

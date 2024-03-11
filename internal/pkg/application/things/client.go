@@ -1,4 +1,4 @@
-package client
+package things
 
 import (
 	"context"
@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/tracing"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
@@ -17,13 +18,18 @@ var tracer = otel.Tracer("things-client")
 
 var ErrThingNotFound = fmt.Errorf("thing not found")
 
-type ThingsClient struct {
+type ClientImpl struct {
 	url               string
 	clientCredentials *clientcredentials.Config
 	httpClient        http.Client
 }
 
-func NewThingsClient(ctx context.Context, url, oauthTokenURL, oauthClientID, oauthClientSecret string) (*ThingsClient, error) {
+//go:generate moq -rm -out client_mock.go . Client
+type Client interface {
+	FindRelatedThings(ctx context.Context, thingID string) ([]Thing, error)
+}
+
+func NewClient(ctx context.Context, url, oauthTokenURL, oauthClientID, oauthClientSecret string) (*ClientImpl, error) {
 	oauthConfig := &clientcredentials.Config{
 		ClientID:     oauthClientID,
 		ClientSecret: oauthClientSecret,
@@ -39,8 +45,8 @@ func NewThingsClient(ctx context.Context, url, oauthTokenURL, oauthClientID, oau
 		return nil, fmt.Errorf("an invalid token was returned from %s", oauthTokenURL)
 	}
 
-	return &ThingsClient{
-		url:               url,
+	return &ClientImpl{
+		url:               strings.TrimSuffix(url, "/"),
 		clientCredentials: oauthConfig,
 		httpClient: http.Client{
 			Transport: otelhttp.NewTransport(http.DefaultTransport),
@@ -48,7 +54,7 @@ func NewThingsClient(ctx context.Context, url, oauthTokenURL, oauthClientID, oau
 	}, nil
 }
 
-func GetThing[T any](ctx context.Context, tc ThingsClient, thingID string) (T, error) {
+func GetThing[T any](ctx context.Context, tc ClientImpl, thingID string) (T, error) {
 	t := new(T)
 
 	response, err := tc.findByID(ctx, thingID)
@@ -64,7 +70,7 @@ func GetThing[T any](ctx context.Context, tc ThingsClient, thingID string) (T, e
 	return *t, nil
 }
 
-func (tc ThingsClient) FindRelatedThings(ctx context.Context, thingID string) ([]Thing, error) {
+func (tc ClientImpl) FindRelatedThings(ctx context.Context, thingID string) ([]Thing, error) {
 	jar, err := tc.findByID(ctx, thingID)
 	if err != nil {
 		return nil, err
@@ -72,12 +78,12 @@ func (tc ThingsClient) FindRelatedThings(ctx context.Context, thingID string) ([
 	return jar.Included, nil
 }
 
-func (tc ThingsClient) findByID(ctx context.Context, thingID string) (*JsonApiResponse, error) {
+func (tc ClientImpl) findByID(ctx context.Context, thingID string) (*JsonApiResponse, error) {
 	var err error
 	ctx, span := tracer.Start(ctx, "find-thing-by-id")
 	defer func() { tracing.RecordAnyErrorAndEndSpan(err, span) }()
 
-	url := tc.url + "/api/v0/things/%s" + thingID
+	url := fmt.Sprintf("%s/%s/%s", tc.url, "api/v0/things", thingID)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
