@@ -44,6 +44,7 @@ type WasteContainer struct {
 	Level        float64   `json:"level"`
 	Temperature  float64   `json:"temperature"`
 	DateObserved time.Time `json:"dateObserved"`
+	Tenant       string    `json:"tenant"`
 }
 
 func (wc WasteContainer) TopicName() string {
@@ -113,18 +114,7 @@ func newTemperatureMessageHandler(msgCtx messaging.MsgContext, tc things.Client,
 
 		deviceID := strings.Split(r.BaseName, "/")[0]
 
-		things, err := tc.FindRelatedThings(ctx, deviceID)
-		if err != nil {
-			log.Error("could not query for things", "err", err.Error())
-			return
-		}
-
-		if len(things) == 0 {
-			log.Debug("no related things")
-			return
-		}
-
-		err = process(ctx, msgCtx, itm, s, things)
+		err = process(ctx, msgCtx, itm, s, tc, deviceID)
 		if err != nil {
 			log.Error("failed to handle message", "err", err.Error())
 			return
@@ -146,18 +136,7 @@ func newLevelMessageHandler(msgCtx messaging.MsgContext, tc things.Client, s sto
 			return
 		}
 
-		things, err := tc.FindRelatedThings(ctx, f.ID)
-		if err != nil {
-			log.Error("could not query for things", "err", err.Error())
-			return
-		}
-
-		if len(things) == 0 {
-			log.Debug("no related things")
-			return
-		}
-
-		err = process(ctx, msgCtx, itm, s, things)
+		err = process(ctx, msgCtx, itm, s, tc, f.ID)
 		if err != nil {
 			log.Error("failed to handle message", "err", err.Error())
 			return
@@ -165,17 +144,22 @@ func newLevelMessageHandler(msgCtx messaging.MsgContext, tc things.Client, s sto
 	}
 }
 
-func process(ctx context.Context, msgCtx messaging.MsgContext, itm messaging.IncomingTopicMessage, s storage.Storage, things []things.Thing) error {
+func process(ctx context.Context, msgCtx messaging.MsgContext, itm messaging.IncomingTopicMessage, s storage.Storage, tc things.Client, id string) error {
 	log := logging.GetFromContext(ctx)
 
-	wasteContainerId, hasWasteContainer := containsWasteContainer(things)
-	if !hasWasteContainer {
-		return fmt.Errorf("contains no wastecontainer")
+	wasteContainer, err := getRelatedWasteContainer(ctx, tc, id)
+	if err != nil {
+		return err
 	}
 
-	wc, err := storage.GetOrDefault(ctx, s, wasteContainerId, WasteContainer{ID: wasteContainerId, Type: "WasteContainer"})
+	tenant := "default"
+	if wasteContainer.Tenant != nil {
+		tenant = *wasteContainer.Tenant
+	}
+
+	wc, err := storage.GetOrDefault(ctx, s, wasteContainer.Id, WasteContainer{ID: wasteContainer.Id, Type: "WasteContainer", Tenant: tenant})
 	if err != nil {
-		log.Error("could not get or create current state for wastecontainer", "wastecontainer_id", wasteContainerId, "err", err.Error())
+		log.Error("could not get or create current state for wastecontainer", "wastecontainer_id", wasteContainer.Id, "err", err.Error())
 		return err
 	}
 
@@ -198,6 +182,22 @@ func process(ctx context.Context, msgCtx messaging.MsgContext, itm messaging.Inc
 	}
 
 	return nil
+}
+
+var ErrContainsNoWasteContainer = fmt.Errorf("contains no wastecontainer")
+
+func getRelatedWasteContainer(ctx context.Context, tc things.Client, id string) (things.Thing, error) {
+	ths, err := tc.FindRelatedThings(ctx, id)
+	if err != nil {
+		return things.Thing{}, err
+	}
+
+	wasteContainerId, hasWasteContainer := containsWasteContainer(ths)
+	if !hasWasteContainer {
+		return things.Thing{}, ErrContainsNoWasteContainer
+	}
+
+	return tc.FindByID(ctx, wasteContainerId)
 }
 
 func containsWasteContainer(ts []things.Thing) (string, bool) {

@@ -18,6 +18,9 @@ var _ Client = &ClientMock{}
 //
 //		// make and configure a mocked Client
 //		mockedClient := &ClientMock{
+//			FindByIDFunc: func(ctx context.Context, thingID string) (Thing, error) {
+//				panic("mock out the FindByID method")
+//			},
 //			FindRelatedThingsFunc: func(ctx context.Context, thingID string) ([]Thing, error) {
 //				panic("mock out the FindRelatedThings method")
 //			},
@@ -28,11 +31,21 @@ var _ Client = &ClientMock{}
 //
 //	}
 type ClientMock struct {
+	// FindByIDFunc mocks the FindByID method.
+	FindByIDFunc func(ctx context.Context, thingID string) (Thing, error)
+
 	// FindRelatedThingsFunc mocks the FindRelatedThings method.
 	FindRelatedThingsFunc func(ctx context.Context, thingID string) ([]Thing, error)
 
 	// calls tracks calls to the methods.
 	calls struct {
+		// FindByID holds details about calls to the FindByID method.
+		FindByID []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
+			// ThingID is the thingID argument value.
+			ThingID string
+		}
 		// FindRelatedThings holds details about calls to the FindRelatedThings method.
 		FindRelatedThings []struct {
 			// Ctx is the ctx argument value.
@@ -41,7 +54,44 @@ type ClientMock struct {
 			ThingID string
 		}
 	}
+	lockFindByID          sync.RWMutex
 	lockFindRelatedThings sync.RWMutex
+}
+
+// FindByID calls FindByIDFunc.
+func (mock *ClientMock) FindByID(ctx context.Context, thingID string) (Thing, error) {
+	if mock.FindByIDFunc == nil {
+		panic("ClientMock.FindByIDFunc: method is nil but Client.FindByID was just called")
+	}
+	callInfo := struct {
+		Ctx     context.Context
+		ThingID string
+	}{
+		Ctx:     ctx,
+		ThingID: thingID,
+	}
+	mock.lockFindByID.Lock()
+	mock.calls.FindByID = append(mock.calls.FindByID, callInfo)
+	mock.lockFindByID.Unlock()
+	return mock.FindByIDFunc(ctx, thingID)
+}
+
+// FindByIDCalls gets all the calls that were made to FindByID.
+// Check the length with:
+//
+//	len(mockedClient.FindByIDCalls())
+func (mock *ClientMock) FindByIDCalls() []struct {
+	Ctx     context.Context
+	ThingID string
+} {
+	var calls []struct {
+		Ctx     context.Context
+		ThingID string
+	}
+	mock.lockFindByID.RLock()
+	calls = mock.calls.FindByID
+	mock.lockFindByID.RUnlock()
+	return calls
 }
 
 // FindRelatedThings calls FindRelatedThingsFunc.

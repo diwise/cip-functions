@@ -72,6 +72,15 @@ func TestTemperatureHandler(t *testing.T) {
 		}, nil
 	}
 
+	tc.FindByIDFunc = func(ctx context.Context, thingID string) (things.Thing, error) {
+		tenant := "tenant"
+		return things.Thing{
+			Id:     "72fb1b1c-d574-4946-befe-0ad1ba57bcf4",
+			Type:   "WasteContainer",
+			Tenant: &tenant,
+		}, nil
+	}
+
 	msgCtx.PublishOnTopicFunc = func(ctx context.Context, message messaging.TopicMessage) error {
 		return nil
 	}
@@ -101,6 +110,15 @@ func TestLevelHandler(t *testing.T) {
 				Id:   "72fb1b1c-d574-4946-befe-0ad1ba57bcf4",
 				Type: "WasteContainer",
 			},
+		}, nil
+	}
+
+	tc.FindByIDFunc = func(ctx context.Context, thingID string) (things.Thing, error) {
+		tenant := "tenant"
+		return things.Thing{
+			Id:     "72fb1b1c-d574-4946-befe-0ad1ba57bcf4",
+			Type:   "WasteContainer",
+			Tenant: &tenant,
 		}, nil
 	}
 

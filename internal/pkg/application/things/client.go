@@ -26,6 +26,7 @@ type ClientImpl struct {
 
 //go:generate moq -rm -out client_mock.go . Client
 type Client interface {
+	FindByID(ctx context.Context, thingID string) (Thing, error)
 	FindRelatedThings(ctx context.Context, thingID string) ([]Thing, error)
 }
 
@@ -54,20 +55,20 @@ func NewClient(ctx context.Context, url, oauthTokenURL, oauthClientID, oauthClie
 	}, nil
 }
 
-func GetThing[T any](ctx context.Context, tc ClientImpl, thingID string) (T, error) {
-	t := new(T)
+func (tc ClientImpl) FindByID(ctx context.Context, thingID string) (Thing, error) {
+	t := Thing{}
 
 	response, err := tc.findByID(ctx, thingID)
 	if err != nil {
-		return *t, err
+		return t, err
 	}
 
 	err = json.Unmarshal(response.Data, &t)
 	if err != nil {
-		return *t, err
+		return t, err
 	}
 
-	return *t, nil
+	return t, nil
 }
 
 func (tc ClientImpl) FindRelatedThings(ctx context.Context, thingID string) ([]Thing, error) {
@@ -146,6 +147,7 @@ type JsonApiResponse struct {
 }
 
 type Thing struct {
-	Id   string `json:"id"`
-	Type string `json:"type"`
+	Id     string  `json:"id"`
+	Type   string  `json:"type"`
+	Tenant *string `json:"tenant,omitempty"`
 }
