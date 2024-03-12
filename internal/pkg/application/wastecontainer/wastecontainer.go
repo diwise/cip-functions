@@ -13,8 +13,8 @@ import (
 	"github.com/diwise/cip-functions/internal/pkg/application/things"
 	"github.com/diwise/cip-functions/internal/pkg/infrastructure/storage"
 	"github.com/diwise/messaging-golang/pkg/messaging"
+	"github.com/diwise/senml"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
-	"github.com/farshidtz/senml/v2"
 )
 
 func RegisterMessageHandlers(msgCtx messaging.MsgContext, tc things.Client, s storage.Storage) error {
@@ -73,36 +73,17 @@ func (wc *WasteContainer) Handle(ctx context.Context, itm messaging.IncomingTopi
 		wc.DateObserved = time.Now().UTC()
 	}
 
-	temperature := func(p senml.Pack) (float64, bool) {
-		for _, r := range p {
-			if strings.EqualFold(r.Name, "5700") {
-				if r.Value != nil {
-					return *r.Value, true
-				}
-			}
-		}
-		return 0, false
+	if m.Pack == nil {
+		return nil
 	}
 
-	timestamp := func(p senml.Pack) (time.Time, bool) {
-		c := p.Clone()
-		c.Normalize()
-		for _, r := range c {
-			if strings.HasSuffix(r.Name, "/5700") {
-				return time.Unix(int64(r.Time), 0), true
-			}
-		}
-		return time.Time{}, false
+	if t, ok := m.Pack.GetValue(senml.FindByName("5700")); ok {
+		wc.Temperature = t
 	}
 
-	if m.Pack != nil {
-		if t, ok := temperature(*m.Pack); ok {
-			wc.Temperature = t
-		}
-		if ts, ok := timestamp(*m.Pack); ok {
-			if ts.After(wc.DateObserved) {
-				wc.DateObserved = ts
-			}
+	if ts, ok := m.Pack.GetTime(senml.FindByName("5700")); ok {
+		if ts.After(wc.DateObserved) {
+			wc.DateObserved = ts
 		}
 	}
 
@@ -118,28 +99,19 @@ func newTemperatureMessageHandler(msgCtx messaging.MsgContext, tc things.Client,
 			Timestamp time.Time  `json:"timestamp"`
 		}{}
 
-		getDeviceID := func(p senml.Pack) (string, bool) {
-			if p[0].Name != "0" {
-				return "", false
-			}
-			parts := strings.Split(p[0].BaseName, "/")
-
-			return parts[0], true
-		}
-
 		err = json.Unmarshal(itm.Body(), &m)
 		if err != nil {
 			log.Error("unmarshal error", "err", err.Error())
 			return
 		}
 
-		var deviceID string
-		var ok bool = false
-
-		if deviceID, ok = getDeviceID(m.Pack); !ok {
-			log.Error("pack contains no deviceID")
+		r, ok := m.Pack.GetRecord(senml.FindByName("0"))
+		if !ok {
+			log.Error("package contains no deviceID")
 			return
 		}
+
+		deviceID := strings.Split(r.BaseName, "/")[0]
 
 		things, err := tc.FindRelatedThings(ctx, deviceID)
 		if err != nil {

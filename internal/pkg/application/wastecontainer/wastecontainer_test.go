@@ -12,7 +12,7 @@ import (
 	"github.com/diwise/cip-functions/internal/pkg/application/things"
 	"github.com/diwise/cip-functions/internal/pkg/infrastructure/storage"
 	"github.com/diwise/messaging-golang/pkg/messaging"
-	"github.com/farshidtz/senml/v2"
+	"github.com/diwise/senml"
 	"github.com/matryer/is"
 )
 

@@ -1,6 +1,6 @@
 module github.com/diwise/cip-functions
 
-go 1.22
+go 1.22.0
 
 require (
 	github.com/diwise/messaging-golang v0.0.0-20240126121333-1e56bea211f9
@@ -8,6 +8,7 @@ require (
 )
 
 require (
+	github.com/diwise/senml v0.0.0-20240311145208-da31140751df // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20231201235250-de7065d80cb9 // indirect
@@ -23,8 +24,7 @@ require github.com/matryer/is v1.4.1
 require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
-	github.com/cespare/xxhash/v2 v2.2.0 // indirect
-	github.com/farshidtz/senml/v2 v2.0.0
+	github.com/cespare/xxhash/v2 v2.2.0 // indirect	
 	github.com/go-chi/chi/v5 v5.0.12
 	github.com/go-logr/logr v1.4.1 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
