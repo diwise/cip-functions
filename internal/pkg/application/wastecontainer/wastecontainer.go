@@ -112,7 +112,14 @@ func newTemperatureMessageHandler(msgCtx messaging.MsgContext, tc things.Client,
 			return
 		}
 
-		deviceID := strings.Split(r.BaseName, "/")[0]
+		deviceID := strings.Split(r.Name, "/")[0]
+		if deviceID == "" {
+			b, _ := json.Marshal(m)
+			log.Error("deviceID is empty", "message", string(b))
+			return
+		}
+
+		log.Debug("process temperature message for device", slog.String("device_id", deviceID))
 
 		err = process(ctx, msgCtx, itm, s, tc, deviceID)
 		if err != nil {

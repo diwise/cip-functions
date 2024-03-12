@@ -55,7 +55,7 @@ func TestTemperatureHandler(t *testing.T) {
 	is, msgCtx, tc, s, ctx, log := testSetup(t, memStore)
 
 	var pack senml.Pack
-	is.NoErr(json.Unmarshal([]byte(temperature), &pack))
+	is.NoErr(json.Unmarshal([]byte(temperature225), &pack))
 	ts := time.Unix(1710151647, 0)
 
 	itm := messageAccepted{
@@ -88,6 +88,46 @@ func TestTemperatureHandler(t *testing.T) {
 	newTemperatureMessageHandler(msgCtx, tc, s)(ctx, itm, log)
 
 	is.Equal(22.5, memStore["72fb1b1c-d574-4946-befe-0ad1ba57bcf4"].(WasteContainer).Temperature)
+}
+
+func TestTemperatureHandlerAnotherPack(t *testing.T) {
+	memStore := make(map[string]any)
+	is, msgCtx, tc, s, ctx, log := testSetup(t, memStore)
+
+	var pack senml.Pack
+	is.NoErr(json.Unmarshal([]byte(temperature22), &pack))
+	ts := time.Unix(1710256247, 0)
+
+	itm := messageAccepted{
+		Pack:      pack,
+		Timestamp: ts,
+	}
+
+	tc.FindRelatedThingsFunc = func(ctx context.Context, thingID string) ([]things.Thing, error) {
+		return []things.Thing{
+			{
+				Id:   "72fb1b1c-d574-4946-befe-0ad1ba57bcf5",
+				Type: "WasteContainer",
+			},
+		}, nil
+	}
+
+	tc.FindByIDFunc = func(ctx context.Context, thingID string) (things.Thing, error) {
+		tenant := "tenant"
+		return things.Thing{
+			Id:     "72fb1b1c-d574-4946-befe-0ad1ba57bcf5",
+			Type:   "WasteContainer",
+			Tenant: &tenant,
+		}, nil
+	}
+
+	msgCtx.PublishOnTopicFunc = func(ctx context.Context, message messaging.TopicMessage) error {
+		return nil
+	}
+
+	newTemperatureMessageHandler(msgCtx, tc, s)(ctx, itm, log)
+
+	is.Equal(22.0, memStore["72fb1b1c-d574-4946-befe-0ad1ba57bcf5"].(WasteContainer).Temperature)
 }
 
 func TestLevelHandler(t *testing.T) {
@@ -159,4 +199,6 @@ func testSetup(t *testing.T, store map[string]any) (*is.I, *messaging.MsgContext
 	return is, msgCtx, tc, s, context.Background(), log
 }
 
-const temperature string = `[{"bn":"25e185f6-bdba-4c68-b6e8-23ae2bb10254/3303/","bt":1710151647,"n":"0","vs":"urn:oma:lwm2m:ext:3303"},{"n":"5700","u":"Cel","v":22.5}]`
+const temperature225 string = `[{"bn":"25e185f6-bdba-4c68-b6e8-23ae2bb10254/3303/","bt":1710151647,"n":"0","vs":"urn:oma:lwm2m:ext:3303"},{"n":"5700","u":"Cel","v":22.5}]`
+
+const temperature22 string = `[{"bn":"f4ee732e-c610-43a5-9bcf-3e4043fe3560/3303/","bt":1710256247,"n":"0","vs":"urn:oma:lwm2m:ext:3303"},{"n":"5700","u":"Cel","v":22},{"u":"lat","v":0},{"u":"lon","v":0},{"n":"env","vs":"indoors"},{"n":"tenant","vs":"default"}]`
