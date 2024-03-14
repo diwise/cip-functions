@@ -144,7 +144,7 @@ func TestLevelHandler(t *testing.T) {
 		ID:      "25e185f6-bdba-4c68-b6e8-23ae2bb10254",
 		Type:    "level",
 		SubType: "overflow",
-		Level: level {
+		Level: level{
 			Percent: &percent,
 		},
 	}

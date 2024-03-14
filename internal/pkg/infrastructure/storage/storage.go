@@ -8,7 +8,7 @@ import (
 //go:generate moq -rm -out storage_mock.go . Storage
 type Storage interface {
 	Create(ctx context.Context, id string, value any) error
-	Read(ctx context.Context, id string) (any, error)	
+	Read(ctx context.Context, id string) (any, error)
 	Update(ctx context.Context, id string, value any) error
 	Delete(ctx context.Context, id string) error
 	Exists(ctx context.Context, id string) bool
