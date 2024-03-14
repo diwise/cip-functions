@@ -3,7 +3,6 @@ package functions
 import (
 	"context"
 
-	"github.com/diwise/cip-functions/internal/pkg/application/functions/combinedsewageoverflow"
 	"github.com/diwise/cip-functions/internal/pkg/application/functions/options"
 	"github.com/diwise/cip-functions/internal/pkg/application/functions/sewagepumpingstation"
 	"github.com/diwise/cip-functions/internal/pkg/infrastructure/storage"
@@ -22,7 +21,6 @@ type fnImpl struct {
 	ID_   string `json:"id"`
 	Type_ string `json:"type"`
 
-	SewageOverflow               combinedsewageoverflow.SewageOverflow             `json:"sewageOverflow,omitempty"`
 	IncomingSewagePumpingStation sewagepumpingstation.IncomingSewagePumpingStation `json:"sewagePumpingStation,omitempty"`
 
 	handle func(ctx context.Context, msg *events.FunctionUpdated, store storage.Storage, msgCtx messaging.MsgContext, opts ...options.Option) error

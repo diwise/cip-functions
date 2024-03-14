@@ -103,10 +103,10 @@ func (jds *JsonDataStore) Update(ctx context.Context, id string, value any) erro
 	return nil
 }
 
-func (jds *JsonDataStore) Read(ctx context.Context, id string) (any, error) {	
+func (jds *JsonDataStore) Read(ctx context.Context, id string) (any, error) {
 	var obj any
-	
-	err := jds.db.QueryRow(ctx, `select data from cip_fnct where id = $1`, id).Scan(&obj)		
+
+	err := jds.db.QueryRow(ctx, `select data from cip_fnct where id = $1`, id).Scan(&obj)
 	if err != nil {
 		return nil, err
 	}
