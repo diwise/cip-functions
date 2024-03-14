@@ -61,7 +61,7 @@ func TestStateChange(t *testing.T) {
 
 	newStopwatchMessageHandler(msgCtx, tc, s)(ctx, itm, log)
 	is.True(!memStore["72fb1b1c-d574-4946-befe-0ad1ba57bcf4"].(CombinedSewageOverflow).Overflows[0].State)
-	is.Equal(memStore["72fb1b1c-d574-4946-befe-0ad1ba57bcf4"].(CombinedSewageOverflow).CumulativeTime, 1 * time.Hour)
+	is.Equal(memStore["72fb1b1c-d574-4946-befe-0ad1ba57bcf4"].(CombinedSewageOverflow).CumulativeTime, 1*time.Hour)
 }
 
 func TestMultipleOverflows(t *testing.T) {
@@ -89,7 +89,7 @@ func TestMultipleOverflows(t *testing.T) {
 
 	newStopwatchMessageHandler(msgCtx, tc, s)(ctx, itm, log)
 	is.True(!memStore["72fb1b1c-d574-4946-befe-0ad1ba57bcf4"].(CombinedSewageOverflow).Overflows[0].State)
-	is.Equal(memStore["72fb1b1c-d574-4946-befe-0ad1ba57bcf4"].(CombinedSewageOverflow).CumulativeTime, 1 * time.Hour)
+	is.Equal(memStore["72fb1b1c-d574-4946-befe-0ad1ba57bcf4"].(CombinedSewageOverflow).CumulativeTime, 1*time.Hour)
 
 	itm.Stopwatch.StartTime = stopTime.Add(1 * time.Hour)
 	itm.Stopwatch.State = true
@@ -98,14 +98,14 @@ func TestMultipleOverflows(t *testing.T) {
 	newStopwatchMessageHandler(msgCtx, tc, s)(ctx, itm, log)
 	is.Equal(2, len(memStore["72fb1b1c-d574-4946-befe-0ad1ba57bcf4"].(CombinedSewageOverflow).Overflows))
 
-	newStopTime := stopTime.Add(2 *time.Hour)
+	newStopTime := stopTime.Add(2 * time.Hour)
 	itm.Stopwatch.StartTime = stopTime.Add(1 * time.Hour)
 	itm.Stopwatch.State = false
 	itm.Stopwatch.StopTime = &newStopTime
 
 	newStopwatchMessageHandler(msgCtx, tc, s)(ctx, itm, log)
 	is.Equal(2, len(memStore["72fb1b1c-d574-4946-befe-0ad1ba57bcf4"].(CombinedSewageOverflow).Overflows))
-	is.Equal(memStore["72fb1b1c-d574-4946-befe-0ad1ba57bcf4"].(CombinedSewageOverflow).CumulativeTime, 2 * time.Hour)
+	is.Equal(memStore["72fb1b1c-d574-4946-befe-0ad1ba57bcf4"].(CombinedSewageOverflow).CumulativeTime, 2*time.Hour)
 }
 
 func (f functionUpdated) Body() []byte {
