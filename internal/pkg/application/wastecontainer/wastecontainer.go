@@ -178,13 +178,13 @@ func process(ctx context.Context, msgCtx messaging.MsgContext, itm messaging.Inc
 
 	wc, err := storage.GetOrDefault(ctx, s, wasteContainer.Id, WasteContainer{ID: wasteContainer.Id, Type: "WasteContainer", Tenant: tenant})
 	if err != nil {
-		log.Error("could not get or create current state for wastecontainer", "wastecontainer_id", wasteContainer.Id, "err", err.Error())
+		log.Error("could not get or create current state for waste container", "wastecontainer_id", wasteContainer.Id, "err", err.Error())
 		return err
 	}
 
 	err = wc.Handle(ctx, itm)
 	if err != nil {
-		log.Error("could not handle incommig message", "err", err.Error())
+		log.Error("could not handle incomig message", "err", err.Error())
 		return err
 	}
 
@@ -203,7 +203,7 @@ func process(ctx context.Context, msgCtx messaging.MsgContext, itm messaging.Inc
 	return nil
 }
 
-var ErrContainsNoWasteContainer = fmt.Errorf("contains no wastecontainer")
+var ErrContainsNoWasteContainer = fmt.Errorf("contains no waste container")
 
 func getRelatedWasteContainer(ctx context.Context, tc things.Client, id string) (things.Thing, error) {
 	ths, err := tc.FindRelatedThings(ctx, id)
