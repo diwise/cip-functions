@@ -5,7 +5,6 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log/slog"
 	"slices"
@@ -20,17 +19,9 @@ import (
 )
 
 func RegisterMessageHandlers(msgCtx messaging.MsgContext, tc things.Client, s storage.Storage) error {
-	var err error
-	var errs []error
-
-	err = msgCtx.RegisterTopicMessageHandlerWithFilter("function.updated", newStopwatchMessageHandler(msgCtx, tc, s), func(m messaging.Message) bool {
+	return msgCtx.RegisterTopicMessageHandlerWithFilter("function.updated", newStopwatchMessageHandler(msgCtx, tc, s), func(m messaging.Message) bool {
 		return strings.HasPrefix(m.ContentType(), "application/vnd.diwise.stopwatch")
 	})
-	if err != nil {
-		errs = append(errs, err)
-	}
-
-	return errors.Join(errs...)
 }
 
 func newStopwatchMessageHandler(msgCtx messaging.MsgContext, tc things.Client, s storage.Storage) messaging.TopicMessageHandler {
@@ -217,13 +208,13 @@ func process(ctx context.Context, msgCtx messaging.MsgContext, itm messaging.Inc
 
 	cso, err := storage.GetOrDefault(ctx, s, combinedSewageOverflow.Id, CombinedSewageOverflow{ID: combinedSewageOverflow.Id, Type: "CombinedSewageOverflow", Tenant: tenant})
 	if err != nil {
-		log.Error("could not get or create current state for wastecontainer", "wastecontainer_id", combinedSewageOverflow.Id, "err", err.Error())
+		log.Error("could not get or create current state for combined sewage overflow", "combinedsewageoverflow_id", combinedSewageOverflow.Id, "err", err.Error())
 		return err
 	}
 
 	changed, err := cso.Handle(ctx, itm)
 	if err != nil {
-		log.Error("could not handle incommig message", "err", err.Error())
+		log.Error("could not handle incomig message", "err", err.Error())
 		return err
 	}
 
@@ -246,7 +237,7 @@ func process(ctx context.Context, msgCtx messaging.MsgContext, itm messaging.Inc
 	return nil
 }
 
-var ErrContainsNoCombinedSewageOverflow = fmt.Errorf("contains no CombinedSewageOverflow")
+var ErrContainsNoCombinedSewageOverflow = fmt.Errorf("contains no combined sewage overflow")
 
 func getRelatedCombinedSewageOverflow(ctx context.Context, tc things.Client, id string) (things.Thing, error) {
 	ths, err := tc.FindRelatedThings(ctx, id)
