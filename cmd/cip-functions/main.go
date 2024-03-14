@@ -11,7 +11,10 @@ import (
 
 	"github.com/diwise/cip-functions/internal/pkg/application"
 	"github.com/diwise/cip-functions/internal/pkg/application/functions"
-	"github.com/diwise/cip-functions/internal/pkg/infrastructure/database"
+	"github.com/diwise/cip-functions/internal/pkg/application/things"
+	"github.com/diwise/cip-functions/internal/pkg/application/wastecontainer"
+	"github.com/diwise/cip-functions/internal/pkg/infrastructure/storage"
+	"github.com/diwise/cip-functions/internal/pkg/infrastructure/storage/database"
 	api "github.com/diwise/cip-functions/internal/pkg/presentation"
 	"github.com/diwise/cip-functions/pkg/messaging/events"
 	"github.com/diwise/messaging-golang/pkg/messaging"
@@ -42,6 +45,9 @@ func main() {
 	defer msgCtx.Close()
 
 	storage := createDatabaseConnectionOrDie(ctx)
+	thingsClient := createThingsClientOrDie(ctx)
+
+	wastecontainer.RegisterMessageHandlers(msgCtx, *thingsClient, storage)
 
 	var configFile *os.File
 
@@ -80,7 +86,7 @@ func createMessagingContextOrDie(ctx context.Context) messaging.MsgContext {
 	return messenger
 }
 
-func createDatabaseConnectionOrDie(ctx context.Context) database.Storage {
+func createDatabaseConnectionOrDie(ctx context.Context) storage.Storage {
 	storage, err := database.Connect(ctx, database.LoadConfiguration(ctx))
 	if err != nil {
 		fatal(ctx, "database connect failed", err)
@@ -92,7 +98,21 @@ func createDatabaseConnectionOrDie(ctx context.Context) database.Storage {
 	return storage
 }
 
-func initialize(ctx context.Context, msgctx messaging.MsgContext, fconfig io.Reader, storage database.Storage) (application.App, api.API, error) {
+func createThingsClientOrDie(ctx context.Context) *things.ClientImpl {
+	tokenUrl := env.GetVariableOrDie(ctx, "OAUTH2_TOKEN_URL", "")
+	clientId := env.GetVariableOrDie(ctx, "OAUTH2_CLIENT_ID", "")
+	secret := env.GetVariableOrDie(ctx, "OAUTH2_CLIENT_SECRET", "")
+	thingsUrl := env.GetVariableOrDefault(ctx, "THINGS_URL", "http://iot-things:8080")
+
+	c, err := things.NewClient(ctx, thingsUrl, tokenUrl, clientId, secret)
+	if err != nil {
+		fatal(ctx, "", err)
+	}
+
+	return c
+}
+
+func initialize(ctx context.Context, msgctx messaging.MsgContext, fconfig io.Reader, storage storage.Storage) (application.App, api.API, error) {
 	fnRegistry, err := functions.NewRegistry(ctx, fconfig)
 	if err != nil {
 		return nil, nil, err

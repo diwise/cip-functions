@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/diwise/cip-functions/internal/pkg/application/functions/options"
-	"github.com/diwise/cip-functions/internal/pkg/infrastructure/database"
+	"github.com/diwise/cip-functions/internal/pkg/infrastructure/storage"
 	"github.com/diwise/cip-functions/pkg/messaging/events"
 	"github.com/diwise/cip-functions/pkg/messaging/topics"
 	"github.com/diwise/messaging-golang/pkg/messaging"
@@ -53,7 +53,7 @@ func (sp SewagePumpingStation) ContentType() string {
 	return "application/vnd+diwise.sewagepumpingstation+json"
 }
 
-func (sp *IncomingSewagePumpingStation) Handle(ctx context.Context, msg *events.FunctionUpdated, storage database.Storage, msgCtx messaging.MsgContext, opts ...options.Option) error {
+func (sp *IncomingSewagePumpingStation) Handle(ctx context.Context, msg *events.FunctionUpdated, store storage.Storage, msgCtx messaging.MsgContext, opts ...options.Option) error {
 
 	log := logging.GetFromContext(ctx)
 
@@ -69,7 +69,7 @@ func (sp *IncomingSewagePumpingStation) Handle(ctx context.Context, msg *events.
 		log.Error("failed to parse time from state", "id", id, "msg", err)
 	}
 
-	exists := storage.Exists(ctx, id)
+	exists := store.Exists(ctx, id)
 	if !exists {
 		spo := SewagePumpingStation{
 			ID:         id,
@@ -78,7 +78,7 @@ func (sp *IncomingSewagePumpingStation) Handle(ctx context.Context, msg *events.
 			ObservedAt: &timestamp,
 		}
 
-		err := storage.Create(ctx, id, spo)
+		err := store.Create(ctx, id, spo)
 		if err != nil {
 			log.Error("failed to create new sewagepumpingstation in storage")
 			return err
@@ -93,7 +93,7 @@ func (sp *IncomingSewagePumpingStation) Handle(ctx context.Context, msg *events.
 		log.Info("published message", "id", spo.ID, "topic", spo.TopicName())
 
 	} else {
-		spo, err := database.Get[SewagePumpingStation](ctx, storage, id)
+		spo, err := storage.Get[SewagePumpingStation](ctx, store, id)
 		if err != nil {
 			log.Error("could not retrieve sewagepumpingstation from storage", "id", id, "msg", err)
 			return err
@@ -103,7 +103,7 @@ func (sp *IncomingSewagePumpingStation) Handle(ctx context.Context, msg *events.
 
 		spo.ObservedAt = &timestamp
 
-		storage.Update(ctx, id, spo)
+		store.Update(ctx, id, spo)
 
 		err = msgCtx.PublishOnTopic(ctx, spo)
 		if err != nil {

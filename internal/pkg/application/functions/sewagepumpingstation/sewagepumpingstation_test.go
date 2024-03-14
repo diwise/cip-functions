@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/diwise/cip-functions/internal/pkg/infrastructure/database"
+	"github.com/diwise/cip-functions/internal/pkg/infrastructure/storage"
 	"github.com/diwise/cip-functions/pkg/messaging/events"
 	"github.com/diwise/messaging-golang/pkg/messaging"
 	"github.com/matryer/is"
@@ -90,7 +90,7 @@ func TestSewagePumpingStationHandleChecksIfStatusIsUnchanged(t *testing.T) {
 	is.Equal(len(msgCtxMock.PublishOnTopicCalls()), 2)
 }
 
-func testSetup(t *testing.T, msgID string, state bool) (*is.I, *database.StorageMock, *messaging.MsgContextMock, events.FunctionUpdated) {
+func testSetup(t *testing.T, msgID string, state bool) (*is.I, *storage.StorageMock, *messaging.MsgContextMock, events.FunctionUpdated) {
 	is := is.New(t)
 
 	timestamp := time.Now()
@@ -108,7 +108,7 @@ func testSetup(t *testing.T, msgID string, state bool) (*is.I, *database.Storage
 		},
 	}
 
-	dbMock := &database.StorageMock{
+	dbMock := &storage.StorageMock{
 		ExistsFunc: func(ctx context.Context, id string) bool {
 			if id == "fnID:004" {
 				return true
@@ -122,7 +122,7 @@ func testSetup(t *testing.T, msgID string, state bool) (*is.I, *database.Storage
 		UpdateFunc: func(ctx context.Context, id string, value any) error {
 			return nil
 		},
-		SelectFunc: func(ctx context.Context, id string) (any, error) {
+		ReadFunc: func(ctx context.Context, id string) (any, error) {
 			return SewagePumpingStation{
 				ID:    id,
 				State: state,
