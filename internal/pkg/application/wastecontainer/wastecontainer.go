@@ -60,8 +60,9 @@ func (wc WasteContainer) Body() []byte {
 	return b
 }
 
-func (wc *WasteContainer) Handle(ctx context.Context, itm messaging.IncomingTopicMessage) error {
+func (wc *WasteContainer) Handle(ctx context.Context, itm messaging.IncomingTopicMessage) (bool, error) {
 	var err error
+	changed := false
 
 	m := struct {
 		ID     *string     `json:"id,omitempty"`
@@ -75,32 +76,36 @@ func (wc *WasteContainer) Handle(ctx context.Context, itm messaging.IncomingTopi
 
 	err = json.Unmarshal(itm.Body(), &m)
 	if err != nil {
-		return err
+		return changed, err
 	}
 
 	if m.Level != nil {
 		wc.Level = *m.Level.Percent
+		changed = true
 	}
 
 	if m.Pack == nil {
-		return nil
+		return changed, nil
 	}
 
 	if t, ok := m.Pack.GetValue(senml.FindByName("5700")); ok {
 		wc.Temperature = t
+		changed = true
 	}
 
 	if ts, ok := m.Pack.GetTime(senml.FindByName("5700")); ok {
 		if ts.After(wc.DateObserved) {
 			wc.DateObserved = ts
+			changed = true
 		}
 	}
 
 	if wc.DateObserved.IsZero() {
 		wc.DateObserved = time.Now().UTC()
+		changed = true
 	}
 
-	return nil
+	return changed, nil
 }
 
 func newTemperatureMessageHandler(msgCtx messaging.MsgContext, tc things.Client, s storage.Storage) messaging.TopicMessageHandler {
@@ -182,10 +187,14 @@ func process(ctx context.Context, msgCtx messaging.MsgContext, itm messaging.Inc
 		return err
 	}
 
-	err = wc.Handle(ctx, itm)
+	changed, err := wc.Handle(ctx, itm)
 	if err != nil {
 		log.Error("could not handle incomig message", "err", err.Error())
 		return err
+	}
+
+	if !changed {
+		return nil
 	}
 
 	err = storage.CreateOrUpdate(ctx, s, wc.ID, wc)
