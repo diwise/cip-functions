@@ -63,7 +63,16 @@ func (wc WasteContainer) Body() []byte {
 func (wc *WasteContainer) Handle(ctx context.Context, itm messaging.IncomingTopicMessage) error {
 	var err error
 
-	m := msg{}
+	m := struct {
+		ID     *string     `json:"id,omitempty"`
+		Tenant *string     `json:"tenant,omitempty"`
+		Pack   *senml.Pack `json:"pack,omitempty"`
+		Level  *struct {
+			Current float64  `json:"current"`
+			Percent *float64 `json:"percent,omitempty"`
+		} `json:"level,omitempty"`
+	}{}
+
 	err = json.Unmarshal(itm.Body(), &m)
 	if err != nil {
 		return err
@@ -71,7 +80,6 @@ func (wc *WasteContainer) Handle(ctx context.Context, itm messaging.IncomingTopi
 
 	if m.Level != nil {
 		wc.Level = *m.Level.Percent
-		wc.DateObserved = time.Now().UTC()
 	}
 
 	if m.Pack == nil {
@@ -86,6 +94,10 @@ func (wc *WasteContainer) Handle(ctx context.Context, itm messaging.IncomingTopi
 		if ts.After(wc.DateObserved) {
 			wc.DateObserved = ts
 		}
+	}
+
+	if wc.DateObserved.IsZero() {
+		wc.DateObserved = time.Now().UTC()
 	}
 
 	return nil
@@ -217,16 +229,4 @@ func containsWasteContainer(ts []things.Thing) (string, bool) {
 	}
 
 	return ts[idx].Id, true
-}
-
-type msg struct {
-	ID     *string     `json:"id,omitempty"`
-	Tenant *string     `json:"tenant,omitempty"`
-	Level  *level      `json:"level,omitempty"`
-	Pack   *senml.Pack `json:"pack,omitempty"`
-}
-
-type level struct {
-	Current float64  `json:"current"`
-	Percent *float64 `json:"percent,omitempty"`
 }

@@ -39,6 +39,11 @@ type functionUpdated struct {
 	Level   level  `json:"level,omitempty"`
 }
 
+type level struct {
+	Current float64  `json:"current"`
+	Percent *float64 `json:"percent,omitempty"`
+}
+
 func (f functionUpdated) Body() []byte {
 	b, _ := json.Marshal(f)
 	return b
@@ -139,7 +144,7 @@ func TestLevelHandler(t *testing.T) {
 		ID:      "25e185f6-bdba-4c68-b6e8-23ae2bb10254",
 		Type:    "level",
 		SubType: "overflow",
-		Level: level{
+		Level: level {
 			Percent: &percent,
 		},
 	}
