@@ -79,7 +79,7 @@ func (wc *WasteContainer) Handle(ctx context.Context, itm messaging.IncomingTopi
 		return changed, err
 	}
 
-	if m.Level != nil {
+	if m.Level != nil && m.Level.Percent != nil {
 		wc.Level = *m.Level.Percent
 		changed = true
 	}
