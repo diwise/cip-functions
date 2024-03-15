@@ -81,6 +81,7 @@ func (wc *WasteContainer) Handle(ctx context.Context, itm messaging.IncomingTopi
 
 	if m.Level != nil && m.Level.Percent != nil {
 		wc.Level = *m.Level.Percent
+		wc.DateObserved = time.Now().UTC()
 		changed = true
 	}
 
