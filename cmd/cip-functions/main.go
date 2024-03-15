@@ -10,6 +10,7 @@ import (
 	"os"
 
 	"github.com/diwise/cip-functions/internal/pkg/application"
+	"github.com/diwise/cip-functions/internal/pkg/application/combinedsewageoverflow"
 	"github.com/diwise/cip-functions/internal/pkg/application/functions"
 	"github.com/diwise/cip-functions/internal/pkg/application/things"
 	"github.com/diwise/cip-functions/internal/pkg/application/wastecontainer"
@@ -48,6 +49,7 @@ func main() {
 	thingsClient := createThingsClientOrDie(ctx)
 
 	wastecontainer.RegisterMessageHandlers(msgCtx, *thingsClient, storage)
+	combinedsewageoverflow.RegisterMessageHandlers(msgCtx, *thingsClient, storage)
 
 	var configFile *os.File
 
