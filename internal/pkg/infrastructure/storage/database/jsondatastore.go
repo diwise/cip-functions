@@ -103,7 +103,7 @@ func (jds *JsonDataStore) Update(ctx context.Context, id, typeName string, value
 func (jds *JsonDataStore) Read(ctx context.Context, id, typeName string) (any, error) {
 	var obj any
 
-	err := jds.db.QueryRow(ctx, `select data from cip_fnct where id = $1`, id).Scan(&obj)
+	err := jds.db.QueryRow(ctx, `select data from cip_fnct where id=$1 and type=$2`, id, typeName).Scan(&obj)
 	if err != nil {
 		return nil, err
 	}
@@ -113,7 +113,7 @@ func (jds *JsonDataStore) Read(ctx context.Context, id, typeName string) (any, e
 
 func (jds *JsonDataStore) Exists(ctx context.Context, id, typeName string) bool {
 	var n int32
-	err := jds.db.QueryRow(ctx, `select count(*) from cip_fnct where id = $1`, id).Scan(&n)
+	err := jds.db.QueryRow(ctx, `select count(*) from cip_fnct where id = $1 and type=$2`, id, typeName).Scan(&n)
 	if err != nil {
 		return false
 	}

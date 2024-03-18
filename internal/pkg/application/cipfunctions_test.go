@@ -58,10 +58,10 @@ func testSetup(t *testing.T) (*is.I, context.Context, *messaging.MsgContextMock,
 	}
 
 	db := &storage.StorageMock{
-		CreateFunc: func(ctx context.Context, id,tn string, value any) error {
+		CreateFunc: func(ctx context.Context, id, tn string, value any) error {
 			return nil
 		},
-		UpdateFunc: func(ctx context.Context, id,tn string, value any) error {
+		UpdateFunc: func(ctx context.Context, id, tn string, value any) error {
 			return nil
 		},
 		ExistsFunc: func(ctx context.Context, id, typeName string) bool {

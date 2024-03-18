@@ -156,10 +156,10 @@ func setup(t *testing.T, store map[string]any) (*is.I, *messaging.MsgContextMock
 	log := slog.New(slog.NewTextHandler(os.Stdout, nil))
 
 	s.ReadFunc = func(ctx context.Context, id, typeName string) (any, error) {
-		if a, ok := store[id]; ok {
+		fullID := fmt.Sprintf("%s:%s", typeName, id)
+		if a, ok := store[fullID]; ok {
 			return a, nil
 		}
-
 		return nil, fmt.Errorf("not found")
 	}
 
@@ -169,9 +169,8 @@ func setup(t *testing.T, store map[string]any) (*is.I, *messaging.MsgContextMock
 		return ok
 	}
 
-	s.CreateFunc = func(ctx context.Context, id,tn string, value any) error {
+	s.CreateFunc = func(ctx context.Context, id, tn string, value any) error {
 		fullID := fmt.Sprintf("%s:%s", tn, id)
-		
 		store[fullID] = value
 		return nil
 	}
