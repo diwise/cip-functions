@@ -12,7 +12,6 @@ type Storage interface {
 	Create(ctx context.Context, id, typeName string, value any) error
 	Read(ctx context.Context, id, typeName string) (any, error)
 	Update(ctx context.Context, id, typeName string, value any) error
-	Delete(ctx context.Context, id, typeName string) error
 	Exists(ctx context.Context, id, typeName string) bool
 }
 

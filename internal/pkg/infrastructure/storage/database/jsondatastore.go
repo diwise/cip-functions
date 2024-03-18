@@ -86,20 +86,6 @@ func (jds *JsonDataStore) Create(ctx context.Context, id, typeName string, value
 	return nil
 }
 
-func (jds *JsonDataStore) Delete(ctx context.Context, id, typeName string) error {
-	_, err := jds.db.Exec(ctx, `delete from cip_fnct where id = $1`, id)
-	if err != nil {
-		return err
-	}
-
-	_, err = jds.db.Exec(ctx, `delete from cip_fnct_values where cip_fnct_id = $1`, id)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func (jds *JsonDataStore) Update(ctx context.Context, id, typeName string, value any) error {
 	b, err := json.Marshal(value)
 	if err != nil {
