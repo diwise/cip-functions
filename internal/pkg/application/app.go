@@ -133,7 +133,7 @@ func NewFunctionUpdatedHandler[T Fnct](app Application, fn func(id, tenant strin
 	}
 }
 
-func GetRelatedThing[T any](ctx context.Context, app Application, id string) (things.Thing, error) {
+func getRelatedThing[T any](ctx context.Context, app Application, id string) (things.Thing, error) {
 	typeName := storage.GetTypeName[T]()
 	return app.getRelated(ctx, id, typeName)
 }
@@ -158,7 +158,7 @@ func (a Application) getRelated(ctx context.Context, id, typeName string) (thing
 func Process[T Fnct](ctx context.Context, app Application, id string, itm messaging.IncomingTopicMessage, fn func(id, t string) T) (bool, error) {
 	log := logging.GetFromContext(ctx)
 
-	rel, err := GetRelatedThing[T](ctx, app, id)
+	rel, err := getRelatedThing[T](ctx, app, id)
 	if err != nil {
 		return false, err
 	}
