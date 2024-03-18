@@ -3,19 +3,23 @@ package storage
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 )
 
 //go:generate moq -rm -out storage_mock.go . Storage
 type Storage interface {
 	Create(ctx context.Context, id string, value any) error
-	Read(ctx context.Context, id string) (any, error)
+	Read(ctx context.Context, id, typeName string) (any, error)
 	Update(ctx context.Context, id string, value any) error
-	Delete(ctx context.Context, id string) error
-	Exists(ctx context.Context, id string) bool
+	Delete(ctx context.Context, id, typeName string) error
+	Exists(ctx context.Context, id, typeName string) bool
 }
 
 func Get[T any](ctx context.Context, storage Storage, id string) (T, error) {
-	t1, err := storage.Read(ctx, id)
+	t := *new(T)
+	typeName := fmt.Sprintf("%T", t)
+
+	t1, err := storage.Read(ctx, id, typeName)
 	if err != nil {
 		return *new(T), err
 	}
@@ -24,8 +28,6 @@ func Get[T any](ctx context.Context, storage Storage, id string) (T, error) {
 	if err != nil {
 		return *new(T), err
 	}
-
-	t := *new(T)
 
 	err = json.Unmarshal(b, &t)
 	if err != nil {
@@ -47,7 +49,10 @@ func GetOrDefault[T any](ctx context.Context, storage Storage, id string, defaul
 func CreateOrUpdate[T any](ctx context.Context, storage Storage, id string, value T) error {
 	var err error
 
-	if storage.Exists(ctx, id) {
+	t := *new(T)
+	typeName := fmt.Sprintf("%T", t)
+
+	if storage.Exists(ctx, id, typeName) {
 		err = storage.Update(ctx, id, value)
 	} else {
 		err = storage.Create(ctx, id, value)

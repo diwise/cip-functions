@@ -21,13 +21,13 @@ var _ Storage = &StorageMock{}
 //			CreateFunc: func(ctx context.Context, id string, value any) error {
 //				panic("mock out the Create method")
 //			},
-//			DeleteFunc: func(ctx context.Context, id string) error {
+//			DeleteFunc: func(ctx context.Context, id string, typeName string) error {
 //				panic("mock out the Delete method")
 //			},
-//			ExistsFunc: func(ctx context.Context, id string) bool {
+//			ExistsFunc: func(ctx context.Context, id string, typeName string) bool {
 //				panic("mock out the Exists method")
 //			},
-//			ReadFunc: func(ctx context.Context, id string) (any, error) {
+//			ReadFunc: func(ctx context.Context, id string, typeName string) (any, error) {
 //				panic("mock out the Read method")
 //			},
 //			UpdateFunc: func(ctx context.Context, id string, value any) error {
@@ -44,13 +44,13 @@ type StorageMock struct {
 	CreateFunc func(ctx context.Context, id string, value any) error
 
 	// DeleteFunc mocks the Delete method.
-	DeleteFunc func(ctx context.Context, id string) error
+	DeleteFunc func(ctx context.Context, id string, typeName string) error
 
 	// ExistsFunc mocks the Exists method.
-	ExistsFunc func(ctx context.Context, id string) bool
+	ExistsFunc func(ctx context.Context, id string, typeName string) bool
 
 	// ReadFunc mocks the Read method.
-	ReadFunc func(ctx context.Context, id string) (any, error)
+	ReadFunc func(ctx context.Context, id string, typeName string) (any, error)
 
 	// UpdateFunc mocks the Update method.
 	UpdateFunc func(ctx context.Context, id string, value any) error
@@ -72,6 +72,8 @@ type StorageMock struct {
 			Ctx context.Context
 			// ID is the id argument value.
 			ID string
+			// TypeName is the typeName argument value.
+			TypeName string
 		}
 		// Exists holds details about calls to the Exists method.
 		Exists []struct {
@@ -79,6 +81,8 @@ type StorageMock struct {
 			Ctx context.Context
 			// ID is the id argument value.
 			ID string
+			// TypeName is the typeName argument value.
+			TypeName string
 		}
 		// Read holds details about calls to the Read method.
 		Read []struct {
@@ -86,6 +90,8 @@ type StorageMock struct {
 			Ctx context.Context
 			// ID is the id argument value.
 			ID string
+			// TypeName is the typeName argument value.
+			TypeName string
 		}
 		// Update holds details about calls to the Update method.
 		Update []struct {
@@ -145,21 +151,23 @@ func (mock *StorageMock) CreateCalls() []struct {
 }
 
 // Delete calls DeleteFunc.
-func (mock *StorageMock) Delete(ctx context.Context, id string) error {
+func (mock *StorageMock) Delete(ctx context.Context, id string, typeName string) error {
 	if mock.DeleteFunc == nil {
 		panic("StorageMock.DeleteFunc: method is nil but Storage.Delete was just called")
 	}
 	callInfo := struct {
-		Ctx context.Context
-		ID  string
+		Ctx      context.Context
+		ID       string
+		TypeName string
 	}{
-		Ctx: ctx,
-		ID:  id,
+		Ctx:      ctx,
+		ID:       id,
+		TypeName: typeName,
 	}
 	mock.lockDelete.Lock()
 	mock.calls.Delete = append(mock.calls.Delete, callInfo)
 	mock.lockDelete.Unlock()
-	return mock.DeleteFunc(ctx, id)
+	return mock.DeleteFunc(ctx, id, typeName)
 }
 
 // DeleteCalls gets all the calls that were made to Delete.
@@ -167,12 +175,14 @@ func (mock *StorageMock) Delete(ctx context.Context, id string) error {
 //
 //	len(mockedStorage.DeleteCalls())
 func (mock *StorageMock) DeleteCalls() []struct {
-	Ctx context.Context
-	ID  string
+	Ctx      context.Context
+	ID       string
+	TypeName string
 } {
 	var calls []struct {
-		Ctx context.Context
-		ID  string
+		Ctx      context.Context
+		ID       string
+		TypeName string
 	}
 	mock.lockDelete.RLock()
 	calls = mock.calls.Delete
@@ -181,21 +191,23 @@ func (mock *StorageMock) DeleteCalls() []struct {
 }
 
 // Exists calls ExistsFunc.
-func (mock *StorageMock) Exists(ctx context.Context, id string) bool {
+func (mock *StorageMock) Exists(ctx context.Context, id string, typeName string) bool {
 	if mock.ExistsFunc == nil {
 		panic("StorageMock.ExistsFunc: method is nil but Storage.Exists was just called")
 	}
 	callInfo := struct {
-		Ctx context.Context
-		ID  string
+		Ctx      context.Context
+		ID       string
+		TypeName string
 	}{
-		Ctx: ctx,
-		ID:  id,
+		Ctx:      ctx,
+		ID:       id,
+		TypeName: typeName,
 	}
 	mock.lockExists.Lock()
 	mock.calls.Exists = append(mock.calls.Exists, callInfo)
 	mock.lockExists.Unlock()
-	return mock.ExistsFunc(ctx, id)
+	return mock.ExistsFunc(ctx, id, typeName)
 }
 
 // ExistsCalls gets all the calls that were made to Exists.
@@ -203,12 +215,14 @@ func (mock *StorageMock) Exists(ctx context.Context, id string) bool {
 //
 //	len(mockedStorage.ExistsCalls())
 func (mock *StorageMock) ExistsCalls() []struct {
-	Ctx context.Context
-	ID  string
+	Ctx      context.Context
+	ID       string
+	TypeName string
 } {
 	var calls []struct {
-		Ctx context.Context
-		ID  string
+		Ctx      context.Context
+		ID       string
+		TypeName string
 	}
 	mock.lockExists.RLock()
 	calls = mock.calls.Exists
@@ -217,21 +231,23 @@ func (mock *StorageMock) ExistsCalls() []struct {
 }
 
 // Read calls ReadFunc.
-func (mock *StorageMock) Read(ctx context.Context, id string) (any, error) {
+func (mock *StorageMock) Read(ctx context.Context, id string, typeName string) (any, error) {
 	if mock.ReadFunc == nil {
 		panic("StorageMock.ReadFunc: method is nil but Storage.Read was just called")
 	}
 	callInfo := struct {
-		Ctx context.Context
-		ID  string
+		Ctx      context.Context
+		ID       string
+		TypeName string
 	}{
-		Ctx: ctx,
-		ID:  id,
+		Ctx:      ctx,
+		ID:       id,
+		TypeName: typeName,
 	}
 	mock.lockRead.Lock()
 	mock.calls.Read = append(mock.calls.Read, callInfo)
 	mock.lockRead.Unlock()
-	return mock.ReadFunc(ctx, id)
+	return mock.ReadFunc(ctx, id, typeName)
 }
 
 // ReadCalls gets all the calls that were made to Read.
@@ -239,12 +255,14 @@ func (mock *StorageMock) Read(ctx context.Context, id string) (any, error) {
 //
 //	len(mockedStorage.ReadCalls())
 func (mock *StorageMock) ReadCalls() []struct {
-	Ctx context.Context
-	ID  string
+	Ctx      context.Context
+	ID       string
+	TypeName string
 } {
 	var calls []struct {
-		Ctx context.Context
-		ID  string
+		Ctx      context.Context
+		ID       string
+		TypeName string
 	}
 	mock.lockRead.RLock()
 	calls = mock.calls.Read

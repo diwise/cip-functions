@@ -69,7 +69,7 @@ func (sp *IncomingSewagePumpingStation) Handle(ctx context.Context, msg *events.
 		log.Error("failed to parse time from state", "id", id, "msg", err)
 	}
 
-	exists := store.Exists(ctx, id)
+	exists := store.Exists(ctx, id, "SewagePumpingStation")
 	if !exists {
 		spo := SewagePumpingStation{
 			ID:         id,

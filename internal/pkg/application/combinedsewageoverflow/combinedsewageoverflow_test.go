@@ -126,7 +126,7 @@ func testSetup(t *testing.T, store map[string]any) (*is.I, *messaging.MsgContext
 	s := &storage.StorageMock{}
 	log := slog.New(slog.NewTextHandler(os.Stdout, nil))
 
-	s.ReadFunc = func(ctx context.Context, id string) (any, error) {
+	s.ReadFunc = func(ctx context.Context, id,typeName string) (any, error) {
 		if a, ok := store[id]; ok {
 			return a, nil
 		}
@@ -134,7 +134,7 @@ func testSetup(t *testing.T, store map[string]any) (*is.I, *messaging.MsgContext
 		return nil, fmt.Errorf("not found")
 	}
 
-	s.ExistsFunc = func(ctx context.Context, id string) bool {
+	s.ExistsFunc = func(ctx context.Context, id,typeName string) bool {
 		_, ok := store[id]
 		return ok
 	}

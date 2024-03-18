@@ -109,7 +109,7 @@ func testSetup(t *testing.T, msgID string, state bool) (*is.I, *storage.StorageM
 	}
 
 	dbMock := &storage.StorageMock{
-		ExistsFunc: func(ctx context.Context, id string) bool {
+		ExistsFunc: func(ctx context.Context, id, typeName string) bool {
 			if id == "fnID:004" {
 				return true
 			} else {
@@ -122,7 +122,7 @@ func testSetup(t *testing.T, msgID string, state bool) (*is.I, *storage.StorageM
 		UpdateFunc: func(ctx context.Context, id string, value any) error {
 			return nil
 		},
-		ReadFunc: func(ctx context.Context, id string) (any, error) {
+		ReadFunc: func(ctx context.Context, id, typeName string) (any, error) {
 			return SewagePumpingStation{
 				ID:    id,
 				State: state,
