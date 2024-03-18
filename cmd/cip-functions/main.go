@@ -46,7 +46,9 @@ func main() {
 	storage := createDatabaseConnectionOrDie(ctx)
 	thingsClient := createThingsClientOrDie(ctx)
 
-	err = application.RegisterMessageHandlers(msgCtx, thingsClient, storage)
+	app := application.NewApplication(msgCtx, thingsClient, storage)
+
+	err = application.RegisterMessageHandlers(app)
 	if err != nil {
 		fatal(ctx, "failed to register handlers", err)
 	}

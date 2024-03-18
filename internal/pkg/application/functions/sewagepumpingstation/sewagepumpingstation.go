@@ -78,7 +78,7 @@ func (sp *IncomingSewagePumpingStation) Handle(ctx context.Context, msg *events.
 			ObservedAt: &timestamp,
 		}
 
-		err := store.Create(ctx, id, spo)
+		err := store.Create(ctx, id, "SewagePumpingStation", spo)
 		if err != nil {
 			log.Error("failed to create new sewagepumpingstation in storage")
 			return err
@@ -103,7 +103,7 @@ func (sp *IncomingSewagePumpingStation) Handle(ctx context.Context, msg *events.
 
 		spo.ObservedAt = &timestamp
 
-		store.Update(ctx, id, spo)
+		store.Update(ctx, id, "SewagePumpingStation", spo)
 
 		err = msgCtx.PublishOnTopic(ctx, spo)
 		if err != nil {

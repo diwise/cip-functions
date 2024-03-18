@@ -116,10 +116,10 @@ func testSetup(t *testing.T, msgID string, state bool) (*is.I, *storage.StorageM
 				return false
 			}
 		},
-		CreateFunc: func(ctx context.Context, id string, value any) error {
+		CreateFunc: func(ctx context.Context, id, tn string, value any) error {
 			return nil
 		},
-		UpdateFunc: func(ctx context.Context, id string, value any) error {
+		UpdateFunc: func(ctx context.Context, id, tn string, value any) error {
 			return nil
 		},
 		ReadFunc: func(ctx context.Context, id, typeName string) (any, error) {

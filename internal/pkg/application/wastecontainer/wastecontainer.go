@@ -3,39 +3,18 @@ package wastecontainer
 import (
 	"context"
 	"encoding/json"
-	"errors"
-	"fmt"
-	"log/slog"
-	"slices"
-	"strings"
 	"time"
 
-	"github.com/diwise/cip-functions/internal/pkg/application/things"
-	"github.com/diwise/cip-functions/internal/pkg/infrastructure/storage"
 	"github.com/diwise/messaging-golang/pkg/messaging"
 	"github.com/diwise/senml"
-	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
 )
 
-func RegisterMessageHandlers(msgCtx messaging.MsgContext, tc things.Client, s storage.Storage) error {
-	var err error
-	var errs []error
-
-	err = msgCtx.RegisterTopicMessageHandlerWithFilter("function.updated", newLevelMessageHandler(msgCtx, tc, s), func(m messaging.Message) bool {
-		return strings.HasPrefix(m.ContentType(), "application/vnd.diwise.level")
-	})
-	if err != nil {
-		errs = append(errs, err)
+var WasteContainerFactory = func(id, tenant string) *WasteContainer {
+	return &WasteContainer{
+		ID:     id,
+		Type:   "WasteContainer",
+		Tenant: tenant,
 	}
-
-	err = msgCtx.RegisterTopicMessageHandlerWithFilter("message.accepted", newTemperatureMessageHandler(msgCtx, tc, s), func(m messaging.Message) bool {
-		return strings.HasPrefix(m.ContentType(), "application/vnd.oma.lwm2m.ext.3303")
-	})
-	if err != nil {
-		errs = append(errs, err)
-	}
-
-	return errors.Join(errs...)
 }
 
 type WasteContainer struct {
@@ -107,136 +86,4 @@ func (wc *WasteContainer) Handle(ctx context.Context, itm messaging.IncomingTopi
 	}
 
 	return changed, nil
-}
-
-func newTemperatureMessageHandler(msgCtx messaging.MsgContext, tc things.Client, s storage.Storage) messaging.TopicMessageHandler {
-	return func(ctx context.Context, itm messaging.IncomingTopicMessage, log *slog.Logger) {
-		var err error
-
-		m := struct {
-			Pack      senml.Pack `json:"pack"`
-			Timestamp time.Time  `json:"timestamp"`
-		}{}
-
-		err = json.Unmarshal(itm.Body(), &m)
-		if err != nil {
-			log.Error("unmarshal error", "err", err.Error())
-			return
-		}
-
-		r, ok := m.Pack.GetRecord(senml.FindByName("0"))
-		if !ok {
-			log.Error("package contains no deviceID")
-			return
-		}
-
-		deviceID := strings.Split(r.Name, "/")[0]
-		if deviceID == "" {
-			b, _ := json.Marshal(m)
-			log.Error("deviceID is empty", "message", string(b))
-			return
-		}
-
-		log.Debug("process temperature message for device", slog.String("device_id", deviceID))
-
-		err = process(ctx, msgCtx, itm, s, tc, deviceID)
-		if err != nil {
-			log.Error("failed to handle message", "err", err.Error())
-			return
-		}
-	}
-}
-
-func newLevelMessageHandler(msgCtx messaging.MsgContext, tc things.Client, s storage.Storage) messaging.TopicMessageHandler {
-	return func(ctx context.Context, itm messaging.IncomingTopicMessage, log *slog.Logger) {
-		var err error
-
-		f := struct {
-			ID string `json:"id,omitempty"`
-		}{}
-
-		err = json.Unmarshal(itm.Body(), &f)
-		if err != nil {
-			log.Error("unmarshal error", "err", err.Error())
-			return
-		}
-
-		err = process(ctx, msgCtx, itm, s, tc, f.ID)
-		if err != nil {
-			log.Error("failed to handle message", "err", err.Error())
-			return
-		}
-	}
-}
-
-func process(ctx context.Context, msgCtx messaging.MsgContext, itm messaging.IncomingTopicMessage, s storage.Storage, tc things.Client, id string) error {
-	log := logging.GetFromContext(ctx)
-
-	wasteContainer, err := getRelatedWasteContainer(ctx, tc, id)
-	if err != nil {
-		return err
-	}
-
-	tenant := "default"
-	if wasteContainer.Tenant != nil {
-		tenant = *wasteContainer.Tenant
-	}
-
-	wc, err := storage.GetOrDefault(ctx, s, wasteContainer.Id, WasteContainer{ID: wasteContainer.Id, Type: "WasteContainer", Tenant: tenant})
-	if err != nil {
-		log.Error("could not get or create current state for waste container", "wastecontainer_id", wasteContainer.Id, "err", err.Error())
-		return err
-	}
-
-	changed, err := wc.Handle(ctx, itm)
-	if err != nil {
-		log.Error("could not handle incomig message", "err", err.Error())
-		return err
-	}
-
-	if !changed {
-		return nil
-	}
-
-	err = storage.CreateOrUpdate(ctx, s, wc.ID, wc)
-	if err != nil {
-		log.Error("could not store state", "err", err.Error())
-		return err
-	}
-
-	err = msgCtx.PublishOnTopic(ctx, wc)
-	if err != nil {
-		log.Error("could not publish message", "err", err.Error())
-		return err
-	}
-
-	return nil
-}
-
-var ErrContainsNoWasteContainer = fmt.Errorf("contains no waste container")
-
-func getRelatedWasteContainer(ctx context.Context, tc things.Client, id string) (things.Thing, error) {
-	ths, err := tc.FindRelatedThings(ctx, id)
-	if err != nil {
-		return things.Thing{}, err
-	}
-
-	wasteContainerId, hasWasteContainer := containsWasteContainer(ths)
-	if !hasWasteContainer {
-		return things.Thing{}, ErrContainsNoWasteContainer
-	}
-
-	return tc.FindByID(ctx, wasteContainerId)
-}
-
-func containsWasteContainer(ts []things.Thing) (string, bool) {
-	idx := slices.IndexFunc(ts, func(t things.Thing) bool {
-		return strings.EqualFold(t.Type, "WasteContainer")
-	})
-
-	if idx == -1 {
-		return "", false
-	}
-
-	return ts[idx].Id, true
 }

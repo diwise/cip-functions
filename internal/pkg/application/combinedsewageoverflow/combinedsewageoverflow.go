@@ -6,46 +6,18 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"log/slog"
 	"slices"
-	"strings"
 	"time"
 
-	"github.com/diwise/cip-functions/internal/pkg/application/things"
-	"github.com/diwise/cip-functions/internal/pkg/infrastructure/storage"
 	"github.com/diwise/messaging-golang/pkg/messaging"
-	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
 	"github.com/google/uuid"
 )
 
-func RegisterMessageHandlers(msgCtx messaging.MsgContext, tc things.Client, s storage.Storage) error {
-	return msgCtx.RegisterTopicMessageHandlerWithFilter("function.updated", newStopwatchMessageHandler(msgCtx, tc, s), func(m messaging.Message) bool {
-		return strings.HasPrefix(m.ContentType(), "application/vnd.diwise.stopwatch")
-	})
-}
-
-func newStopwatchMessageHandler(msgCtx messaging.MsgContext, tc things.Client, s storage.Storage) messaging.TopicMessageHandler {
-	return func(ctx context.Context, itm messaging.IncomingTopicMessage, log *slog.Logger) {
-		var err error
-
-		stopwatch := struct {
-			ID      string `json:"id"`
-			Name    string `json:"name"`
-			Type    string `json:"type"`
-			SubType string `json:"subtype"`
-		}{}
-
-		err = json.Unmarshal(itm.Body(), &stopwatch)
-		if err != nil {
-			log.Error("unmarshal error", "err", err.Error())
-			return
-		}
-
-		err = process(ctx, msgCtx, itm, s, tc, stopwatch.ID)
-		if err != nil {
-			log.Error("failed to handle message", "err", err.Error())
-			return
-		}
+var CombinedSewageOverflowFactory = func(id, tenant string) *CombinedSewageOverflow {
+	return &CombinedSewageOverflow{
+		ID:     id,
+		Type:   "CombinedSewageOverflow",
+		Tenant: tenant,
 	}
 }
 
@@ -191,76 +163,4 @@ func deterministicUUID(t time.Time) string {
 	}
 
 	return unique.String()
-}
-
-func process(ctx context.Context, msgCtx messaging.MsgContext, itm messaging.IncomingTopicMessage, s storage.Storage, tc things.Client, id string) error {
-	log := logging.GetFromContext(ctx)
-
-	combinedSewageOverflow, err := getRelatedCombinedSewageOverflow(ctx, tc, id)
-	if err != nil {
-		return err
-	}
-
-	tenant := "default"
-	if combinedSewageOverflow.Tenant != nil {
-		tenant = *combinedSewageOverflow.Tenant
-	}
-
-	cso, err := storage.GetOrDefault(ctx, s, combinedSewageOverflow.Id, CombinedSewageOverflow{ID: combinedSewageOverflow.Id, Type: "CombinedSewageOverflow", Tenant: tenant})
-	if err != nil {
-		log.Error("could not get or create current state for combined sewage overflow", "combinedsewageoverflow_id", combinedSewageOverflow.Id, "err", err.Error())
-		return err
-	}
-
-	changed, err := cso.Handle(ctx, itm)
-	if err != nil {
-		log.Error("could not handle incomig message", "err", err.Error())
-		return err
-	}
-
-	if !changed {
-		return nil
-	}
-
-	err = storage.CreateOrUpdate(ctx, s, cso.ID, cso)
-	if err != nil {
-		log.Error("could not store state", "err", err.Error())
-		return err
-	}
-
-	err = msgCtx.PublishOnTopic(ctx, cso)
-	if err != nil {
-		log.Error("could not publish message", "err", err.Error())
-		return err
-	}
-
-	return nil
-}
-
-var ErrContainsNoCombinedSewageOverflow = fmt.Errorf("contains no combined sewage overflow")
-
-func getRelatedCombinedSewageOverflow(ctx context.Context, tc things.Client, id string) (things.Thing, error) {
-	ths, err := tc.FindRelatedThings(ctx, id)
-	if err != nil {
-		return things.Thing{}, err
-	}
-
-	combinedSewageOverflowID, hasCombinedSewageOverflow := containsCombinedSewageOverflow(ths)
-	if !hasCombinedSewageOverflow {
-		return things.Thing{}, ErrContainsNoCombinedSewageOverflow
-	}
-
-	return tc.FindByID(ctx, combinedSewageOverflowID)
-}
-
-func containsCombinedSewageOverflow(ts []things.Thing) (string, bool) {
-	idx := slices.IndexFunc(ts, func(t things.Thing) bool {
-		return strings.EqualFold(t.Type, "CombinedSewageOverflow")
-	})
-
-	if idx == -1 {
-		return "", false
-	}
-
-	return ts[idx].Id, true
 }
