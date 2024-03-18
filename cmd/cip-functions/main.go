@@ -10,10 +10,8 @@ import (
 	"os"
 
 	"github.com/diwise/cip-functions/internal/pkg/application"
-	"github.com/diwise/cip-functions/internal/pkg/application/combinedsewageoverflow"
 	"github.com/diwise/cip-functions/internal/pkg/application/functions"
 	"github.com/diwise/cip-functions/internal/pkg/application/things"
-	"github.com/diwise/cip-functions/internal/pkg/application/wastecontainer"
 	"github.com/diwise/cip-functions/internal/pkg/infrastructure/storage"
 	"github.com/diwise/cip-functions/internal/pkg/infrastructure/storage/database"
 	api "github.com/diwise/cip-functions/internal/pkg/presentation"
@@ -48,8 +46,10 @@ func main() {
 	storage := createDatabaseConnectionOrDie(ctx)
 	thingsClient := createThingsClientOrDie(ctx)
 
-	wastecontainer.RegisterMessageHandlers(msgCtx, *thingsClient, storage)
-	combinedsewageoverflow.RegisterMessageHandlers(msgCtx, *thingsClient, storage)
+	err = application.RegisterMessageHandlers(msgCtx, thingsClient, storage)
+	if err != nil {
+		fatal(ctx, "failed to register handlers", err)
+	}
 
 	var configFile *os.File
 
