@@ -67,9 +67,9 @@ func TestGenericHandler(t *testing.T) {
 		},
 	}
 
-	app := NewApplication(msgCtx, tc, s)
+	app := New(msgCtx, tc, s)
 
-	NewFunctionUpdatedHandler(app, func(id, tenant string) *wastecontainer.WasteContainer {
+	newFunctionUpdatedHandler(app, func(id, tenant string) *wastecontainer.WasteContainer {
 		return &wastecontainer.WasteContainer{
 			ID:     id,
 			Type:   "WasteContainer",
@@ -86,7 +86,7 @@ func TestCombinedSewageOverflowIntegrationTest(t *testing.T) {
 		t.Skip()
 	}
 
-	app := NewApplication(msgCtx, tc, s)
+	app := New(msgCtx, tc, s)
 
 	startTime := time.Now()
 
@@ -100,7 +100,7 @@ func TestCombinedSewageOverflowIntegrationTest(t *testing.T) {
 		},
 	}
 
-	_, err := Process(ctx, app, "25e185f6-bdba-4c68-b6e8-23ae2bb10254", itm, combinedsewageoverflow.CombinedSewageOverflowFactory)
+	_, err := process(ctx, app, "25e185f6-bdba-4c68-b6e8-23ae2bb10254", itm, combinedsewageoverflow.CombinedSewageOverflowFactory)
 	is.NoErr(err)
 }
 
