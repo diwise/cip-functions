@@ -63,12 +63,12 @@ func NewClient(ctx context.Context, url, oauthTokenURL, oauthClientID, oauthClie
 }
 
 func (tc ClientImpl) FindByID(ctx context.Context, thingID string) (Thing, error) {
-	t := Thing{}
-
 	jar, err := tc.findByID(ctx, thingID)
 	if err != nil {
-		return t, err
+		return Thing{}, err
 	}
+
+	t := Thing{}
 
 	err = json.Unmarshal(jar.Data, &t)
 	if err != nil {
@@ -170,13 +170,57 @@ type JsonApiResponse struct {
 }
 
 type Thing struct {
-	Id       string   `json:"id"`
-	Type     string   `json:"type"`
-	Location Location `json:"location"`
-	Tenant   string   `json:"tenant,omitempty"`
+	Id         string          `json:"id"`
+	Type       string          `json:"type"`
+	Location   Location        `json:"location"`
+	Tenant     string          `json:"tenant,omitempty"`
+	Properties *map[string]any `json:"properties,omitempty"`
 }
 
 type Location struct {
 	Latitude  float64 `json:"latitude"`
 	Longitude float64 `json:"longitude"`
+}
+
+func (t *Thing) UnmarshalJSON(data []byte) error {
+	props := make(map[string]any)
+	err := json.Unmarshal(data, &props)
+	if err != nil {
+		return nil
+	}
+
+	if id, ok := props["id"]; ok {
+		t.Id = id.(string)
+		delete(props, "id")
+	}
+
+	if type_, ok := props["type"]; ok {
+		t.Type = type_.(string)
+		delete(props, "type")
+	}
+
+	if loc, ok := props["location"]; ok {
+		b, err := json.Marshal(loc)
+		if err != nil {
+			return err
+		}
+		var loc Location
+		err = json.Unmarshal(b, &loc)
+		if err != nil {
+			return err
+		}
+		t.Location = loc
+		delete(props, "location")
+	}
+
+	if tenant, ok := props["tenant"]; ok {
+		t.Tenant = tenant.(string)
+		delete(props, "tenant")
+	}
+
+	if len(props) > 0 {
+		t.Properties = &props
+	}
+
+	return nil
 }
