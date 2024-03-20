@@ -77,7 +77,7 @@ func TestGenericHandler(t *testing.T) {
 		}
 	})(ctx, itm, log)
 
-	is.Equal(60.0, memStore["WasteContainer:72fb1b1c-d574-4946-befe-0ad1ba57bcf4"].(*wastecontainer.WasteContainer).Level)
+	is.Equal(60.0, memStore["WasteContainer:72fb1b1c-d574-4946-befe-0ad1ba57bcf4"].(*wastecontainer.WasteContainer).Percent)
 }
 
 func TestCombinedSewageOverflowIntegrationTest(t *testing.T) {
@@ -116,7 +116,7 @@ func setupIntegrationTest(t *testing.T) (*is.I, *messaging.MsgContextMock, *thin
 			{
 				Id:     "72fb1b1c-d574-4946-befe-0ad1ba57bcf4",
 				Type:   "CombinedSewageOverflow",
-				Tenant: &tenant,
+				Tenant: tenant,
 			},
 		}, nil
 	}
@@ -126,7 +126,7 @@ func setupIntegrationTest(t *testing.T) (*is.I, *messaging.MsgContextMock, *thin
 		return things.Thing{
 			Id:     "72fb1b1c-d574-4946-befe-0ad1ba57bcf4",
 			Type:   "CombinedSewageOverflow",
-			Tenant: &tenant,
+			Tenant: tenant,
 		}, nil
 	}
 
@@ -181,7 +181,7 @@ func setup(t *testing.T, store map[string]any) (*is.I, *messaging.MsgContextMock
 			{
 				Id:     "72fb1b1c-d574-4946-befe-0ad1ba57bcf4",
 				Type:   "WasteContainer",
-				Tenant: &tenant,
+				Tenant: tenant,
 			},
 		}, nil
 	}
@@ -191,7 +191,7 @@ func setup(t *testing.T, store map[string]any) (*is.I, *messaging.MsgContextMock
 		return things.Thing{
 			Id:     "72fb1b1c-d574-4946-befe-0ad1ba57bcf4",
 			Type:   "WasteContainer",
-			Tenant: &tenant,
+			Tenant: tenant,
 		}, nil
 	}
 

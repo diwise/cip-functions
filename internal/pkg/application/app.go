@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/diwise/cip-functions/internal/pkg/application/combinedsewageoverflow"
@@ -26,7 +27,7 @@ var tracer = otel.Tracer("cip-functions")
 
 type CipFunctionHandler interface {
 	messaging.TopicMessage
-	Handle(ctx context.Context, itm messaging.IncomingTopicMessage) (bool, error)
+	Handle(ctx context.Context, itm messaging.IncomingTopicMessage, tc things.Client) (bool, error)
 }
 
 type App struct {
@@ -78,6 +79,8 @@ func newMessageAcceptedMessageHandler[T CipFunctionHandler](app App, fn func(id,
 	return func(ctx context.Context, itm messaging.IncomingTopicMessage, log *slog.Logger) {
 		var err error
 
+		log.Debug(fmt.Sprintf("start handle message.accepted for type %s", storage.GetTypeName[T]()))
+
 		ctx, span := tracer.Start(ctx, "message.accepted")
 		defer func() { tracing.RecordAnyErrorAndEndSpan(err, span) }()
 
@@ -111,12 +114,17 @@ func newMessageAcceptedMessageHandler[T CipFunctionHandler](app App, fn func(id,
 			log.Error("failed to handle message", "err", err.Error())
 			return
 		}
+
+		log.Debug("done handling message.accepted")
 	}
 }
 
 func newFunctionUpdatedHandler[T CipFunctionHandler](app App, fn func(id, tenant string) T) messaging.TopicMessageHandler {
 	return func(ctx context.Context, itm messaging.IncomingTopicMessage, log *slog.Logger) {
 		var err error
+		t := storage.GetTypeName[T]()
+
+		log.Debug(fmt.Sprintf("start handle function.updated for type %s", t))
 
 		ctx, span := tracer.Start(ctx, "function.updated")
 		defer func() { tracing.RecordAnyErrorAndEndSpan(err, span) }()
@@ -132,30 +140,50 @@ func newFunctionUpdatedHandler[T CipFunctionHandler](app App, fn func(id, tenant
 		}
 
 		if f.ID == "" {
-			log.Error("functionID is empty")
-			log.Debug("functionID is empty", "message", string(itm.Body()))
+			log.Error("ID is empty")
+			log.Debug("ID is empty", "message", string(itm.Body()))
 			return
 		}
+
+		log = log.With(slog.String("id", f.ID), slog.String("type", t))
+		ctx = logging.NewContextWithLogger(ctx, log)
 
 		_, err = process(ctx, app, f.ID, itm, fn)
 		if err != nil {
 			log.Error("failed to handle message", "err", err.Error())
 			return
 		}
+
+		log.Debug("done handling function.updated")
 	}
 }
 
+var mu sync.Mutex
+
 func process[T CipFunctionHandler](ctx context.Context, app App, id string, itm messaging.IncomingTopicMessage, fn func(id, t string) T) (bool, error) {
+	mu.Lock()
+	defer mu.Unlock()
+	
 	log := logging.GetFromContext(ctx)
 
-	rel, err := getRelatedThing[T](ctx, app, id)
+	log.Debug("start process incoming topic message")
+
+	rel, ok, err := getRelatedThing[T](ctx, app, id)
 	if err != nil {
+		log.Debug("error getRelatedThing", "err", err.Error())
 		return false, err
 	}
 
+	if !ok {
+		log.Debug("no related thing found")
+		return false, nil
+	}
+
+	log = log.With(slog.String("rel_id", rel.Id))
+
 	tenant := "default"
-	if rel.Tenant != nil && *rel.Tenant != "" {
-		tenant = *rel.Tenant
+	if rel.Tenant != "" {
+		tenant = rel.Tenant
 	}
 
 	state, err := storage.GetOrDefault(ctx, app.store, rel.Id, fn(rel.Id, tenant))
@@ -164,13 +192,14 @@ func process[T CipFunctionHandler](ctx context.Context, app App, id string, itm 
 		return false, err
 	}
 
-	change, err := state.Handle(ctx, itm)
+	change, err := state.Handle(ctx, itm, app.thingsClient)
 	if err != nil {
 		log.Error("could not handle incomig message", "err", err.Error())
 		return false, err
 	}
 
 	if !change {
+		log.Debug("no state change detected")
 		return false, nil
 	}
 
@@ -189,9 +218,14 @@ func process[T CipFunctionHandler](ctx context.Context, app App, id string, itm 
 	return change, nil
 }
 
+var ErrNoRelatedThingFound = fmt.Errorf("no related thing found")
+
 func (a App) getRelated(ctx context.Context, id, typeName string) (things.Thing, error) {
+	log := logging.GetFromContext(ctx)
+
 	ts, err := a.thingsClient.FindRelatedThings(ctx, id)
 	if err != nil {
+		log.Error(fmt.Sprintf("failed to get related things - %s", err.Error()))
 		return things.Thing{}, err
 	}
 
@@ -200,13 +234,22 @@ func (a App) getRelated(ctx context.Context, id, typeName string) (things.Thing,
 	})
 
 	if idx == -1 {
-		return things.Thing{}, fmt.Errorf("no related thing found")
+		log.Debug(fmt.Sprintf("no related thing found in slice with len=%d", len(ts)))
+		return things.Thing{}, ErrNoRelatedThingFound
 	}
 
 	return ts[idx], nil
 }
 
-func getRelatedThing[T any](ctx context.Context, app App, id string) (things.Thing, error) {
+func getRelatedThing[T any](ctx context.Context, app App, id string) (things.Thing, bool, error) {
 	typeName := storage.GetTypeName[T]()
-	return app.getRelated(ctx, id, typeName)
+	t, err := app.getRelated(ctx, id, typeName)
+	if err != nil {
+		if errors.Is(err, ErrNoRelatedThingFound) {
+			return things.Thing{}, false, nil
+		}
+		return things.Thing{}, false, err
+	}
+
+	return t, true, nil
 }

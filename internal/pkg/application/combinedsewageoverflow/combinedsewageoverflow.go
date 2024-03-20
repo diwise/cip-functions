@@ -9,6 +9,7 @@ import (
 	"slices"
 	"time"
 
+	"github.com/diwise/cip-functions/internal/pkg/application/things"
 	"github.com/diwise/messaging-golang/pkg/messaging"
 	"github.com/google/uuid"
 )
@@ -22,12 +23,13 @@ var CombinedSewageOverflowFactory = func(id, tenant string) *CombinedSewageOverf
 }
 
 type CombinedSewageOverflow struct {
-	ID             string        `json:"id"`
-	Type           string        `json:"type"`
-	Overflows      []Overflow    `json:"overflow"`
-	DateObserved   time.Time     `json:"dateObserved"`
-	CumulativeTime time.Duration `json:"cumulativeTime"`
-	Tenant         string        `json:"tenant"`
+	ID                     string        `json:"id"`
+	Type                   string        `json:"type"`
+	Overflows              []Overflow    `json:"overflow"`
+	DateObserved           time.Time     `json:"dateObserved"`
+	CumulativeTime         time.Duration `json:"cumulativeTime"`
+	Tenant                 string        `json:"tenant"`
+	CombinedSewageOverflow *things.Thing `json:"combinedsewageoverflow,omitempty"`
 }
 
 type Overflow struct {
@@ -80,7 +82,7 @@ func getStopwatch(itm messaging.IncomingTopicMessage) (*stopwatch, error) {
 	return &stopwatch.Stopwatch, nil
 }
 
-func (cso *CombinedSewageOverflow) Handle(ctx context.Context, itm messaging.IncomingTopicMessage) (bool, error) {
+func (cso *CombinedSewageOverflow) Handle(ctx context.Context, itm messaging.IncomingTopicMessage, tc things.Client) (bool, error) {
 	changed := false
 
 	sw, err := getStopwatch(itm)
@@ -92,6 +94,12 @@ func (cso *CombinedSewageOverflow) Handle(ctx context.Context, itm messaging.Inc
 
 	if overflow.StopTime != nil {
 		return changed, fmt.Errorf("current overflow already ended")
+	}
+
+	if cso.CombinedSewageOverflow == nil {
+		if t, err := tc.FindByID(ctx, cso.ID); err == nil {
+			cso.CombinedSewageOverflow = &t
+		}
 	}
 
 	if overflow.State != sw.State {

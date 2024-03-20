@@ -11,6 +11,8 @@ github.com/diwise/messaging-golang v0.0.0-20240126121333-1e56bea211f9 h1:jCJR16Z
 github.com/diwise/messaging-golang v0.0.0-20240126121333-1e56bea211f9/go.mod h1:VUmBPfDlJHQbpgjjbjT60NRFd8h/jg2y9hn5WFNy/Ys=
 github.com/diwise/senml v0.0.0-20240311145208-da31140751df h1:LoPdHzUyxA0mitTKaPPhbVKIf+cQICz18+3xW+6B6iU=
 github.com/diwise/senml v0.0.0-20240311145208-da31140751df/go.mod h1:ufA3dosHOpdrV7y/Cx5hOPNiWM4hD82YHNlsN3T4dLQ=
+github.com/diwise/senml v0.0.0-20240320103927-03207b97394b h1:dSIecd6AH3EWHttoVKVJvXphHrJQlSPFwytKIb+mcAA=
+github.com/diwise/senml v0.0.0-20240320103927-03207b97394b/go.mod h1:ufA3dosHOpdrV7y/Cx5hOPNiWM4hD82YHNlsN3T4dLQ=
 github.com/diwise/service-chassis v0.0.0-20240208114035-ce4e0da5ec05 h1:DruUsJMGFDQd0Oju99lLtrp2l04u8rjdIepkEMhstI8=
 github.com/diwise/service-chassis v0.0.0-20240208114035-ce4e0da5ec05/go.mod h1:kTODcZIDZYW1trSmgGPRQxyNz55GQ5KhRBEV7Qh6gpk=
 github.com/felixge/httpsnoop v1.0.4 h1:NFTV2Zj1bL4mc9sqWACXbQFVBBg2W3GPvqp8/ESS2Wg=

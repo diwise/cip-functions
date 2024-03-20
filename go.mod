@@ -19,7 +19,7 @@ require (
 )
 
 require (
-	github.com/diwise/senml v0.0.0-20240311145208-da31140751df
+	github.com/diwise/senml v0.0.0-20240320103927-03207b97394b
 	github.com/matryer/is v1.4.1
 )
 
