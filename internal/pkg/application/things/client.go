@@ -7,7 +7,9 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"time"
 
+	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/tracing"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel"
@@ -22,6 +24,7 @@ type ClientImpl struct {
 	url               string
 	clientCredentials *clientcredentials.Config
 	httpClient        http.Client
+	cache             *Cache
 }
 
 //go:generate moq -rm -out client_mock.go . Client
@@ -46,24 +49,28 @@ func NewClient(ctx context.Context, url, oauthTokenURL, oauthClientID, oauthClie
 		return nil, fmt.Errorf("an invalid token was returned from %s", oauthTokenURL)
 	}
 
+	c := NewCache()
+	c.Cleanup(5 * time.Minute)
+
 	return &ClientImpl{
 		url:               strings.TrimSuffix(url, "/"),
 		clientCredentials: oauthConfig,
 		httpClient: http.Client{
 			Transport: otelhttp.NewTransport(http.DefaultTransport),
 		},
+		cache: c,
 	}, nil
 }
 
 func (tc ClientImpl) FindByID(ctx context.Context, thingID string) (Thing, error) {
 	t := Thing{}
 
-	response, err := tc.findByID(ctx, thingID)
+	jar, err := tc.findByID(ctx, thingID)
 	if err != nil {
 		return t, err
 	}
 
-	err = json.Unmarshal(response.Data, &t)
+	err = json.Unmarshal(jar.Data, &t)
 	if err != nil {
 		return t, err
 	}
@@ -84,7 +91,21 @@ func (tc ClientImpl) findByID(ctx context.Context, thingID string) (*JsonApiResp
 	ctx, span := tracer.Start(ctx, "find-thing-by-id")
 	defer func() { tracing.RecordAnyErrorAndEndSpan(err, span) }()
 
+	log := logging.GetFromContext(ctx)
+
 	url := fmt.Sprintf("%s/%s/%s", tc.url, "api/v0/things", thingID)
+
+	cachedItem, found := tc.cache.Get(url)
+	if found {
+		log.Debug(fmt.Sprintf("found response for %s in cache", url))
+
+		jar, ok := cachedItem.(JsonApiResponse)
+		if ok {
+			return &jar, nil
+		}
+
+		log.Warn(fmt.Sprintf("found response for %s in cache but could not cast to JsonApiResponse", url))
+	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
@@ -138,6 +159,8 @@ func (tc ClientImpl) findByID(ctx context.Context, thingID string) (*JsonApiResp
 		return nil, err
 	}
 
+	tc.cache.Set(url, jar, 1*time.Minute)
+
 	return &jar, nil
 }
 
@@ -147,7 +170,13 @@ type JsonApiResponse struct {
 }
 
 type Thing struct {
-	Id     string  `json:"id"`
-	Type   string  `json:"type"`
-	Tenant *string `json:"tenant,omitempty"`
+	Id       string   `json:"id"`
+	Type     string   `json:"type"`
+	Location Location `json:"location"`
+	Tenant   string   `json:"tenant,omitempty"`
+}
+
+type Location struct {
+	Latitude  float64 `json:"latitude"`
+	Longitude float64 `json:"longitude"`
 }

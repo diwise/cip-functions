@@ -19,7 +19,7 @@ require (
 )
 
 require (
-	github.com/diwise/senml v0.0.0-20240311145208-da31140751df
+	github.com/diwise/senml v0.0.0-20240320103927-03207b97394b
 	github.com/matryer/is v1.4.1
 )
 
@@ -27,7 +27,7 @@ require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
-	github.com/go-chi/chi/v5 v5.0.12
+	github.com/go-chi/chi/v5 v5.0.12 // indirect
 	github.com/go-logr/logr v1.4.1 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect

@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"reflect"
 
 	"github.com/diwise/service-chassis/pkg/infrastructure/env"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -21,6 +20,17 @@ type Config struct {
 	port     string
 	dbname   string
 	sslmode  string
+}
+
+func NewConfig(host, user, password, port, dbname, sslmode string) Config {
+	return Config{
+		host:     host,
+		user:     user,
+		password: password,
+		port:     port,
+		dbname:   dbname,
+		sslmode:  sslmode,
+	}
 }
 
 func (c Config) ConnStr() string {
@@ -62,18 +72,13 @@ func (jds *JsonDataStore) Initialize(ctx context.Context) error {
 	return jds.createTables(ctx)
 }
 
-func (jds *JsonDataStore) Create(ctx context.Context, id string, value any) error {
+func (jds *JsonDataStore) Create(ctx context.Context, id, typeName string, value any) error {
 	b, err := json.Marshal(value)
 	if err != nil {
 		return err
 	}
 
-	tn, err := getNameOfValue(value)
-	if err != nil {
-		return err
-	}
-
-	_, err = jds.db.Exec(ctx, `insert into cip_fnct (id, type, data) values ($1, $2, $3)`, id, tn, string(b))
+	_, err = jds.db.Exec(ctx, `insert into cip_fnct (id, type, data) values ($1, $2, $3)`, id, typeName, string(b))
 	if err != nil {
 		return err
 	}
@@ -81,32 +86,13 @@ func (jds *JsonDataStore) Create(ctx context.Context, id string, value any) erro
 	return nil
 }
 
-func (jds *JsonDataStore) Delete(ctx context.Context, id, typeName string) error {
-	_, err := jds.db.Exec(ctx, `delete from cip_fnct where id = $1`, id)
-	if err != nil {
-		return err
-	}
-
-	_, err = jds.db.Exec(ctx, `delete from cip_fnct_values where cip_fnct_id = $1`, id)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (jds *JsonDataStore) Update(ctx context.Context, id string, value any) error {
+func (jds *JsonDataStore) Update(ctx context.Context, id, typeName string, value any) error {
 	b, err := json.Marshal(value)
 	if err != nil {
 		return err
 	}
 
-	tn, err := getNameOfValue(value)
-	if err != nil {
-		return err
-	}
-
-	_, err = jds.db.Exec(ctx, `update cip_fnct set data = $3 where id = $1 and type = $2`, id, tn, string(b))
+	_, err = jds.db.Exec(ctx, `update cip_fnct set data = $3 where id = $1 and type = $2`, id, typeName, string(b))
 	if err != nil {
 		return err
 	}
@@ -117,7 +103,7 @@ func (jds *JsonDataStore) Update(ctx context.Context, id string, value any) erro
 func (jds *JsonDataStore) Read(ctx context.Context, id, typeName string) (any, error) {
 	var obj any
 
-	err := jds.db.QueryRow(ctx, `select data from cip_fnct where id = $1`, id).Scan(&obj)
+	err := jds.db.QueryRow(ctx, `select data from cip_fnct where id=$1 and type=$2`, id, typeName).Scan(&obj)
 	if err != nil {
 		return nil, err
 	}
@@ -127,7 +113,7 @@ func (jds *JsonDataStore) Read(ctx context.Context, id, typeName string) (any, e
 
 func (jds *JsonDataStore) Exists(ctx context.Context, id, typeName string) bool {
 	var n int32
-	err := jds.db.QueryRow(ctx, `select count(*) from cip_fnct where id = $1`, id).Scan(&n)
+	err := jds.db.QueryRow(ctx, `select count(*) from cip_fnct where id = $1 and type=$2`, id, typeName).Scan(&n)
 	if err != nil {
 		return false
 	}
@@ -161,13 +147,4 @@ func (jds *JsonDataStore) createTables(ctx context.Context) error {
 	}
 
 	return nil
-}
-
-func getNameOfValue(v any) (string, error) {
-	t := reflect.TypeOf(v)
-	n := t.Name()
-	if n == "" {
-		return "", fmt.Errorf("invalid type name, you should not store anonymous structs")
-	}
-	return n, nil
 }

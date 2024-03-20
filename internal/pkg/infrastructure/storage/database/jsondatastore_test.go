@@ -19,22 +19,6 @@ func TestInitialize(t *testing.T) {
 	s.Close()
 }
 
-func TestCreateStruct(t *testing.T) {
-	is, s, ctx, connected, err := testSetup(t)
-	if !connected {
-		t.Skip("not connected")
-	}
-	is.NoErr(err)
-	defer s.Close()
-
-	err = s.Create(ctx, fmt.Sprintf("id:%d", time.Now().UnixNano()), struct {
-		Name string
-		Age  int
-	}{"John", 30})
-
-	is.True(err != nil)
-}
-
 type person struct {
 	Age  int    `json:"age"`
 	Name string `json:"name"`
@@ -53,7 +37,7 @@ func TestGetOrDefault(t *testing.T) {
 	p1, err := storage.GetOrDefault(ctx, s, id, person{Age: 31, Name: "Joe"})
 	is.NoErr(err)
 
-	err = s.Create(ctx, id, p1)
+	err = s.Create(ctx, id, "person", p1)
 	is.NoErr(err)
 
 	p2, err := storage.Get[person](ctx, s, id)
@@ -71,7 +55,7 @@ func TestCreate(t *testing.T) {
 	is.NoErr(err)
 	defer s.Close()
 
-	err = s.Create(ctx, fmt.Sprintf("id:%d", time.Now().UnixNano()), person{
+	err = s.Create(ctx, fmt.Sprintf("id:%d", time.Now().UnixNano()), "person", person{
 		Age:  30,
 		Name: "John",
 	})
@@ -89,7 +73,7 @@ func TestSelect(t *testing.T) {
 
 	id := fmt.Sprintf("id:%d", time.Now().UnixNano())
 
-	err = s.Create(ctx, id, person{
+	err = s.Create(ctx, id, "person", person{
 		Age:  30,
 		Name: "John",
 	})
