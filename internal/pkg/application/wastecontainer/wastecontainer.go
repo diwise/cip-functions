@@ -3,6 +3,7 @@ package wastecontainer
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"time"
@@ -43,6 +44,23 @@ func (wc WasteContainer) ContentType() string {
 func (wc WasteContainer) Body() []byte {
 	b, _ := json.Marshal(wc)
 	return b
+}
+
+func (wc WasteContainer) Validate() (bool, error) {
+	var errs = make([]error, 0)
+	valid := true
+
+	if wc.Percent < 0 || wc.Percent > 100 {
+		errs = append(errs, fmt.Errorf("percent is invalid, %f", wc.Percent))
+		valid = false
+	}
+
+	if wc.Level < 0 {
+		errs = append(errs, fmt.Errorf("level is invalid, %f", wc.Level))
+		valid = false
+	}
+
+	return valid, errors.Join(errs...)
 }
 
 func (wc *WasteContainer) Handle(ctx context.Context, itm messaging.IncomingTopicMessage, tc things.Client) (bool, error) {
@@ -126,5 +144,10 @@ func (wc *WasteContainer) Handle(ctx context.Context, itm messaging.IncomingTopi
 		changed = true
 	}
 
-	return changed, nil
+	valid, err := wc.Validate()
+	if !valid {
+		log.Warn("waste container has invalid values", "err", err.Error())
+	}
+
+	return changed, err
 }
