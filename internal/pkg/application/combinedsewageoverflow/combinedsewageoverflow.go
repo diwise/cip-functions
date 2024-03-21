@@ -99,6 +99,7 @@ func (cso *CombinedSewageOverflow) Handle(ctx context.Context, itm messaging.Inc
 	if cso.CombinedSewageOverflow == nil {
 		if t, err := tc.FindByID(ctx, cso.ID); err == nil {
 			cso.CombinedSewageOverflow = &t
+			changed = true
 		}
 	}
 
@@ -133,7 +134,7 @@ func (cso *CombinedSewageOverflow) Handle(ctx context.Context, itm messaging.Inc
 	}
 
 	if cso.DateObserved.IsZero() || changed {
-		cso.DateObserved = time.Now().UTC()
+		cso.DateObserved = time.Now().UTC()		
 	}
 
 	n := 10

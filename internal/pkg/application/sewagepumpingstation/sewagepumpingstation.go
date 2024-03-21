@@ -60,18 +60,22 @@ func (sp *SewagePumpingStation) Handle(ctx context.Context, itm messaging.Incomi
 
 	changed := sp.State != m.DigitalInput.State || sp.ObservedAt != &m.Timestamp
 
+	if changed {
+		sp.State = m.DigitalInput.State
+		sp.ObservedAt = &m.Timestamp
+	}
+	
 	if sp.Tenant == "" {
 		sp.Tenant = m.Tenant
+		changed = true
 	}
 
 	if sp.SewagePumpingStation == nil {
 		if t, err := tc.FindByID(ctx, sp.ID); err == nil {
 			sp.SewagePumpingStation = &t
+			changed = true
 		}
 	}
-
-	sp.State = m.DigitalInput.State
-	sp.ObservedAt = &m.Timestamp
 
 	return changed, nil
 }

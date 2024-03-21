@@ -70,23 +70,32 @@ func (wc *WasteContainer) Handle(ctx context.Context, itm messaging.IncomingTopi
 	if wc.WasteContainer == nil {
 		if t, err := tc.FindByID(ctx, wc.ID); err == nil {
 			wc.WasteContainer = &t
+			changed = true
 		}
 	}
 
 	if m.Level != nil {
-		wc.Level = m.Level.Current
+		if wc.Level != m.Level.Current {
+			wc.Level = m.Level.Current
+			changed = true
+		}
 
 		if m.Level.Percent != nil {
-			wc.Percent = math.Round(*m.Level.Percent)
+			incoming := math.Round(*m.Level.Percent)
+			if wc.Percent != incoming {
+				wc.Percent = incoming
+				changed = true
+			}
 		}
 
-		ts := time.Now().UTC()
-		if !m.Timestamp.IsZero() {
-			ts = m.Timestamp
-		}
+		if changed {
+			ts := time.Now().UTC()
+			if !m.Timestamp.IsZero() {
+				ts = m.Timestamp
+			}
 
-		wc.DateObserved = ts
-		changed = true
+			wc.DateObserved = ts
+		}
 	}
 
 	if m.Pack == nil {
@@ -98,14 +107,16 @@ func (wc *WasteContainer) Handle(ctx context.Context, itm messaging.IncomingTopi
 	if recOk {
 		t, valueOk := sensorValue.GetValue()
 		if valueOk {
-			wc.Temperature = t
-			changed = true
+			if wc.Temperature != t {
+				wc.Temperature = t
+				changed = true
+			}
 		}
+
 		ts, timeOk := sensorValue.GetTime()
-		if timeOk {
+		if changed && timeOk {
 			if ts.After(wc.DateObserved) {
 				wc.DateObserved = ts
-				changed = true
 			}
 		}
 	}
