@@ -78,9 +78,8 @@ func RegisterMessageHandlers(app App) error {
 func newMessageAcceptedMessageHandler[T CipFunctionHandler](app App, fn func(id, tenant string) T) messaging.TopicMessageHandler {
 	return func(ctx context.Context, itm messaging.IncomingTopicMessage, log *slog.Logger) {
 		var err error
-
-		log.Debug(fmt.Sprintf("start handle message.accepted for type %s", storage.GetTypeName[T]()))
-
+		t := storage.GetTypeName[T]()
+		
 		ctx, span := tracer.Start(ctx, "message.accepted")
 		defer func() { tracing.RecordAnyErrorAndEndSpan(err, span) }()
 
@@ -109,13 +108,14 @@ func newMessageAcceptedMessageHandler[T CipFunctionHandler](app App, fn func(id,
 			return
 		}
 
+		log = log.With(slog.String("id", deviceID), slog.String("type", t))
+		ctx = logging.NewContextWithLogger(ctx, log)
+
 		_, err = process(ctx, app, deviceID, itm, fn)
 		if err != nil {
 			log.Error("failed to handle message", "err", err.Error())
 			return
-		}
-
-		log.Debug("done handling message.accepted")
+		}		
 	}
 }
 
@@ -123,9 +123,7 @@ func newFunctionUpdatedHandler[T CipFunctionHandler](app App, fn func(id, tenant
 	return func(ctx context.Context, itm messaging.IncomingTopicMessage, log *slog.Logger) {
 		var err error
 		t := storage.GetTypeName[T]()
-
-		log.Debug(fmt.Sprintf("start handle function.updated for type %s", t))
-
+		
 		ctx, span := tracer.Start(ctx, "function.updated")
 		defer func() { tracing.RecordAnyErrorAndEndSpan(err, span) }()
 
@@ -152,9 +150,7 @@ func newFunctionUpdatedHandler[T CipFunctionHandler](app App, fn func(id, tenant
 		if err != nil {
 			log.Error("failed to handle message", "err", err.Error())
 			return
-		}
-
-		log.Debug("done handling function.updated")
+		}		
 	}
 }
 
@@ -164,9 +160,7 @@ func process[T CipFunctionHandler](ctx context.Context, app App, id string, itm 
 	mu.Lock()
 	defer mu.Unlock()
 	
-	log := logging.GetFromContext(ctx)
-
-	log.Debug("start process incoming topic message")
+	log := logging.GetFromContext(ctx)	
 
 	rel, ok, err := getRelatedThing[T](ctx, app, id)
 	if err != nil {
@@ -180,6 +174,7 @@ func process[T CipFunctionHandler](ctx context.Context, app App, id string, itm 
 	}
 
 	log = log.With(slog.String("rel_id", rel.Id))
+	ctx = logging.NewContextWithLogger(ctx, log)
 
 	tenant := "default"
 	if rel.Tenant != "" {

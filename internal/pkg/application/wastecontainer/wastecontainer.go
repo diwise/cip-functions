@@ -60,6 +60,10 @@ func (wc WasteContainer) Validate() (bool, error) {
 		valid = false
 	}
 
+	if wc.Temperature < -50 || wc.Temperature > 100 {
+		errs = append(errs, fmt.Errorf("temperature is invalid %f", wc.Temperature))
+	}
+
 	return valid, errors.Join(errs...)
 }
 
@@ -116,6 +120,10 @@ func (wc *WasteContainer) Handle(ctx context.Context, itm messaging.IncomingTopi
 		}
 	}
 
+	if valid, err := wc.Validate(); !valid {
+		log.Warn("waste container has invalid values", "err", err.Error())
+	}
+
 	if m.Pack == nil {
 		log.Debug(fmt.Sprintf("message contains no pack, is changed: %t", changed))
 		return changed, nil
@@ -144,10 +152,9 @@ func (wc *WasteContainer) Handle(ctx context.Context, itm messaging.IncomingTopi
 		changed = true
 	}
 
-	valid, err := wc.Validate()
-	if !valid {
+	if valid, err := wc.Validate(); !valid {
 		log.Warn("waste container has invalid values", "err", err.Error())
 	}
 
-	return changed, err
+	return changed, nil
 }
