@@ -90,35 +90,42 @@ func (cso *CombinedSewageOverflow) Handle(ctx context.Context, itm messaging.Inc
 		return changed, err
 	}
 
-	overflow := getOrCreateOverflowForStartTime(cso, sw.StartTime)
+	if sw.StartTime.IsZero() {
+		return false, fmt.Errorf("start time is Zero")		
+	}
 
-	if overflow.StopTime != nil {
+	idx, isNew := getOverflowForStartTime(cso, sw.StartTime, sw.State)
+	
+	if cso.Overflows[idx].StopTime != nil {
 		return changed, fmt.Errorf("current overflow already ended")
 	}
 
 	if cso.CombinedSewageOverflow == nil {
 		if t, err := tc.FindByID(ctx, cso.ID); err == nil {
 			cso.CombinedSewageOverflow = &t
-			changed = true
 		}
 	}
 
-	if overflow.State != sw.State {
+	if cso.Overflows[idx].State != sw.State {
 		if sw.State {
 			if sw.Duration != nil {
-				overflow.Duration = *sw.Duration
+				cso.Overflows[idx].Duration = *sw.Duration
+			}
+
+			if sw.Duration == nil {
+				cso.Overflows[idx].Duration = time.Since(cso.Overflows[idx].StartTime)
 			}
 		}
 
 		if !sw.State {
-			overflow.StopTime = sw.StopTime
+			cso.Overflows[idx].StopTime = sw.StopTime
 
 			if sw.Duration != nil {
-				overflow.Duration = *sw.Duration
+				cso.Overflows[idx].Duration = *sw.Duration
 			}
 
 			if sw.Duration == nil {
-				overflow.Duration = overflow.StopTime.Sub(overflow.StartTime)
+				cso.Overflows[idx].Duration = cso.Overflows[idx].StopTime.Sub(cso.Overflows[idx].StartTime)
 			}
 		}
 
@@ -128,35 +135,41 @@ func (cso *CombinedSewageOverflow) Handle(ctx context.Context, itm messaging.Inc
 		}
 
 		cso.CumulativeTime = time.Duration(cumulativeTime)
-		overflow.State = sw.State
+		cso.Overflows[idx].State = sw.State
 
 		changed = true
 	}
 
+	if isNew {
+		changed = true
+	}
+
 	if cso.DateObserved.IsZero() || changed {
-		cso.DateObserved = time.Now().UTC()		
+		cso.DateObserved = time.Now().UTC()
 	}
-
-	n := 10
-	if len(cso.Overflows) < n {
-		n = len(cso.Overflows)
-	}
-
-	cso.Overflows = cso.Overflows[:n]
 
 	return changed, nil
 }
 
-func getOrCreateOverflowForStartTime(cso *CombinedSewageOverflow, t time.Time) *Overflow {
+func getOverflowForStartTime(cso *CombinedSewageOverflow, t time.Time, state bool) (int, bool) {
 	overflowID := deterministicUUID(t)
+
 	idx := slices.IndexFunc(cso.Overflows, func(o Overflow) bool {
 		return o.ID == overflowID
 	})
-	if idx == -1 {
-		cso.Overflows = append(cso.Overflows, Overflow{ID: overflowID, StartTime: t})
-		idx = len(cso.Overflows) - 1
+
+	if idx >= 0 {
+		return idx, false
 	}
-	return &cso.Overflows[idx]
+
+	overflow := Overflow{ID: overflowID, StartTime: t, State: state}
+	cso.Overflows = append(cso.Overflows, overflow)
+
+	idx = slices.IndexFunc(cso.Overflows, func(o Overflow) bool {
+		return o.ID == overflowID
+	})
+
+	return idx, true
 }
 
 func deterministicUUID(t time.Time) string {

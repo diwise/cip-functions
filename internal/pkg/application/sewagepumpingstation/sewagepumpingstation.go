@@ -64,8 +64,8 @@ func (sp *SewagePumpingStation) Handle(ctx context.Context, itm messaging.Incomi
 		sp.State = m.DigitalInput.State
 		sp.ObservedAt = &m.Timestamp
 	}
-	
-	if sp.Tenant == "" {
+
+	if sp.Tenant == "" && m.Tenant != "" {
 		sp.Tenant = m.Tenant
 		changed = true
 	}
@@ -73,7 +73,6 @@ func (sp *SewagePumpingStation) Handle(ctx context.Context, itm messaging.Incomi
 	if sp.SewagePumpingStation == nil {
 		if t, err := tc.FindByID(ctx, sp.ID); err == nil {
 			sp.SewagePumpingStation = &t
-			changed = true
 		}
 	}
 
