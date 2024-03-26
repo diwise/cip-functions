@@ -13,6 +13,7 @@ import (
 
 	"github.com/diwise/cip-functions/internal/pkg/application/combinedsewageoverflow"
 	"github.com/diwise/cip-functions/internal/pkg/application/sewagepumpingstation"
+	"github.com/diwise/cip-functions/internal/pkg/application/sewer"
 	"github.com/diwise/cip-functions/internal/pkg/application/things"
 	"github.com/diwise/cip-functions/internal/pkg/application/wastecontainer"
 	"github.com/diwise/cip-functions/internal/pkg/infrastructure/storage"
@@ -53,6 +54,7 @@ func RegisterMessageHandlers(app App) error {
 	var err error
 	var errs []error
 
+	// Waste container
 	err = app.msgCtx.RegisterTopicMessageHandlerWithFilter(FunctionUpdatedTopic, newFunctionUpdatedHandler(app, wastecontainer.WasteContainerFactory), LevelMessageFilter)
 	if err != nil {
 		errs = append(errs, err)
@@ -62,12 +64,20 @@ func RegisterMessageHandlers(app App) error {
 		errs = append(errs, err)
 	}
 
+	// Combined sewer overflow
 	err = app.msgCtx.RegisterTopicMessageHandlerWithFilter(FunctionUpdatedTopic, newFunctionUpdatedHandler(app, combinedsewageoverflow.CombinedSewageOverflowFactory), StopwatchMessageFilter)
 	if err != nil {
 		errs = append(errs, err)
 	}
 
+	// Sewage pumping station
 	err = app.msgCtx.RegisterTopicMessageHandlerWithFilter(FunctionUpdatedTopic, newFunctionUpdatedHandler(app, sewagepumpingstation.SewagePumpingStationFactory), DigitalInputMessageFilter)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	// Sewer
+	err = app.msgCtx.RegisterTopicMessageHandlerWithFilter(FunctionUpdatedTopic, newFunctionUpdatedHandler(app, sewer.SewerFactory), LevelMessageFilter)
 	if err != nil {
 		errs = append(errs, err)
 	}

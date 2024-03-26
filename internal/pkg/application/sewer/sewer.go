@@ -8,7 +8,6 @@ import (
 
 	"github.com/diwise/cip-functions/internal/pkg/application/things"
 	"github.com/diwise/messaging-golang/pkg/messaging"
-	"github.com/diwise/senml"
 )
 
 var SewerFactory = func(id, tenant string) *Sewer {
@@ -47,9 +46,8 @@ func (s *Sewer) Handle(ctx context.Context, itm messaging.IncomingTopicMessage, 
 	changed := false
 
 	m := struct {
-		ID     string      `json:"id,omitempty"`
-		Tenant *string     `json:"tenant,omitempty"`
-		Pack   *senml.Pack `json:"pack,omitempty"`
+		ID     string  `json:"id,omitempty"`
+		Tenant *string `json:"tenant,omitempty"`
 		Level  *struct {
 			Current float64  `json:"current"`
 			Percent *float64 `json:"percent,omitempty"`
