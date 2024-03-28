@@ -123,8 +123,7 @@ func (wc *WasteContainer) Handle(ctx context.Context, itm messaging.IncomingTopi
 		log.Warn("waste container has invalid values", "err", err.Error())
 	}
 
-	if m.Pack == nil {
-		log.Debug(fmt.Sprintf("message contains no pack, is changed: %t", changed))
+	if m.Pack == nil {		
 		return changed, nil
 	}
 

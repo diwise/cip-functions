@@ -7,8 +7,8 @@ github.com/cespare/xxhash/v2 v2.2.0/go.mod h1:VGX0DQ3Q6kWi7AoAeZDth3/j3BFtOZR5XL
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
-github.com/diwise/messaging-golang v0.0.0-20240126121333-1e56bea211f9 h1:jCJR16Z890FF4Ge82L/yxhsxuoxO9uCN8AM+NnPLgcs=
-github.com/diwise/messaging-golang v0.0.0-20240126121333-1e56bea211f9/go.mod h1:VUmBPfDlJHQbpgjjbjT60NRFd8h/jg2y9hn5WFNy/Ys=
+github.com/diwise/messaging-golang v0.0.0-20240328100115-197aa8e3a58d h1:cJZnkPmM5V8T2q6IaOIHrlqGULPuW7XDyrIoWp3FP3M=
+github.com/diwise/messaging-golang v0.0.0-20240328100115-197aa8e3a58d/go.mod h1:oxItnOgjQbbE2Qn2nSC/qNL3eAUGy6lzGZjcjUd7nQY=
 github.com/diwise/senml v0.0.0-20240320103927-03207b97394b h1:dSIecd6AH3EWHttoVKVJvXphHrJQlSPFwytKIb+mcAA=
 github.com/diwise/senml v0.0.0-20240320103927-03207b97394b/go.mod h1:ufA3dosHOpdrV7y/Cx5hOPNiWM4hD82YHNlsN3T4dLQ=
 github.com/diwise/service-chassis v0.0.0-20240322150318-bfd966f97527 h1:VYFf3t73u6tUl8CvPa82QCBmoZwXiKq91oP8RX2zESY=

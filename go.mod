@@ -3,7 +3,7 @@ module github.com/diwise/cip-functions
 go 1.22.0
 
 require (
-	github.com/diwise/messaging-golang v0.0.0-20240126121333-1e56bea211f9
+	github.com/diwise/messaging-golang v0.0.0-20240328100115-197aa8e3a58d
 	github.com/diwise/service-chassis v0.0.0-20240322150318-bfd966f97527
 )
 

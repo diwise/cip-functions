@@ -80,7 +80,7 @@ func createThingsClientOrDie(ctx context.Context) *things.ClientImpl {
 
 	c, err := things.NewClient(ctx, thingsUrl, tokenUrl, clientId, secret)
 	if err != nil {
-		fatal(ctx, "", err)
+		fatal(ctx, "failed to create things client", err)
 	}
 
 	return c

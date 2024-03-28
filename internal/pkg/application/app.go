@@ -19,6 +19,7 @@ import (
 	"github.com/diwise/cip-functions/internal/pkg/infrastructure/storage"
 	"github.com/diwise/messaging-golang/pkg/messaging"
 	"github.com/diwise/senml"
+	"github.com/diwise/service-chassis/pkg/infrastructure/o11y"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/tracing"
 	"go.opentelemetry.io/otel"
@@ -92,6 +93,7 @@ func newMessageAcceptedMessageHandler[T CipFunctionHandler](app App, fn func(id,
 		
 		ctx, span := tracer.Start(ctx, "message.accepted")
 		defer func() { tracing.RecordAnyErrorAndEndSpan(err, span) }()
+		_, ctx, log = o11y.AddTraceIDToLoggerAndStoreInContext(span, log, ctx)
 
 		m := struct {
 			Pack      senml.Pack `json:"pack"`
@@ -136,6 +138,7 @@ func newFunctionUpdatedHandler[T CipFunctionHandler](app App, fn func(id, tenant
 		
 		ctx, span := tracer.Start(ctx, "function.updated")
 		defer func() { tracing.RecordAnyErrorAndEndSpan(err, span) }()
+		_, ctx, log = o11y.AddTraceIDToLoggerAndStoreInContext(span, log, ctx)
 
 		f := struct {
 			ID string `json:"id,omitempty"`
@@ -174,7 +177,7 @@ func process[T CipFunctionHandler](ctx context.Context, app App, id string, itm 
 
 	rel, ok, err := getRelatedThing[T](ctx, app, id)
 	if err != nil {
-		log.Debug("error getRelatedThing", "err", err.Error())
+		log.Error("could not fetch related thing", "err", err.Error())
 		return false, err
 	}
 
@@ -217,7 +220,7 @@ func process[T CipFunctionHandler](ctx context.Context, app App, id string, itm 
 	err = app.msgCtx.PublishOnTopic(ctx, state)
 	if err != nil {
 		log.Error("could not publish message", "err", err.Error())
-		return change, nil
+		return change, err
 	}
 
 	return change, nil
@@ -230,16 +233,23 @@ func (a App) getRelated(ctx context.Context, id, typeName string) (things.Thing,
 
 	ts, err := a.thingsClient.FindRelatedThings(ctx, id)
 	if err != nil {
+		if errors.Is(err, things.ErrThingNotFound) {
+			return things.Thing{}, ErrNoRelatedThingFound
+		}
+
 		log.Error(fmt.Sprintf("failed to get related things - %s", err.Error()))
 		return things.Thing{}, err
+	}
+
+	if len(ts) == 0 {
+		return things.Thing{}, ErrNoRelatedThingFound
 	}
 
 	idx := slices.IndexFunc(ts, func(t things.Thing) bool {
 		return strings.EqualFold(t.Type, typeName)
 	})
 
-	if idx == -1 {
-		log.Debug(fmt.Sprintf("no related thing found in slice with len=%d", len(ts)))
+	if idx == -1 {		
 		return things.Thing{}, ErrNoRelatedThingFound
 	}
 
@@ -248,6 +258,7 @@ func (a App) getRelated(ctx context.Context, id, typeName string) (things.Thing,
 
 func getRelatedThing[T any](ctx context.Context, app App, id string) (things.Thing, bool, error) {
 	typeName := storage.GetTypeName[T]()
+
 	t, err := app.getRelated(ctx, id, typeName)
 	if err != nil {
 		if errors.Is(err, ErrNoRelatedThingFound) {
