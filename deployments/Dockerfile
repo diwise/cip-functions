@@ -1,4 +1,4 @@
-FROM --platform=$BUILDPLATFORM docker.io/golang:1.21 AS builder
+FROM --platform=$BUILDPLATFORM docker.io/golang:1.22 AS builder
 
 # Set the Current Working Directory inside the container
 WORKDIR /app
@@ -22,7 +22,6 @@ WORKDIR /opt/diwise
 LABEL org.opencontainers.image.source = "https://github.com/diwise/cip-functions"
 
 COPY --from=builder --chown=1001 /app/cmd/cip-functions/cip-functions /opt/diwise
-COPY --chown=1001 assets/config/cip-functions.csv /opt/diwise/config/cip-functions.csv
 
 RUN chown 1001 /opt/diwise
 
