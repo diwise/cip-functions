@@ -77,7 +77,7 @@ func TestGenericHandler(t *testing.T) {
 		}
 	})(ctx, itm, log)
 
-	is.Equal(60.0, memStore["WasteContainer:72fb1b1c-d574-4946-befe-0ad1ba57bcf4"].(*wastecontainer.WasteContainer).Percent)
+	is.Equal(60.0, *memStore["WasteContainer:72fb1b1c-d574-4946-befe-0ad1ba57bcf4"].(*wastecontainer.WasteContainer).Percent)
 }
 
 func TestCombinedSewageOverflowIntegrationTest(t *testing.T) {

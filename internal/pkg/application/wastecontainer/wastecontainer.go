@@ -25,9 +25,9 @@ var WasteContainerFactory = func(id, tenant string) *WasteContainer {
 type WasteContainer struct {
 	ID             string        `json:"id"`
 	Type           string        `json:"type"`
-	Level          float64       `json:"level"`
-	Percent        float64       `json:"percent"`
-	Temperature    float64       `json:"temperature"`
+	Level          *float64      `json:"level,omitempty"`
+	Percent        *float64      `json:"percent,omitempty"`
+	Temperature    *float64      `json:"temperature,omitempty"`
 	DateObserved   time.Time     `json:"dateObserved"`
 	Tenant         string        `json:"tenant"`
 	WasteContainer *things.Thing `json:"wastecontainer,omitempty"`
@@ -50,18 +50,18 @@ func (wc WasteContainer) Validate() (bool, error) {
 	var errs = make([]error, 0)
 	valid := true
 
-	if wc.Percent < 0 || wc.Percent > 100 {
-		errs = append(errs, fmt.Errorf("percent is invalid, %f", wc.Percent))
+	if wc.Percent != nil && (*wc.Percent < 0 || *wc.Percent > 100) {
+		errs = append(errs, fmt.Errorf("percent is invalid, %f", *wc.Percent))
 		valid = false
 	}
 
-	if wc.Level < 0 {
-		errs = append(errs, fmt.Errorf("level is invalid, %f", wc.Level))
+	if wc.Level != nil && *wc.Level < 0 {
+		errs = append(errs, fmt.Errorf("level is invalid, %f", *wc.Level))
 		valid = false
 	}
 
-	if wc.Temperature < -50 || wc.Temperature > 100 {
-		errs = append(errs, fmt.Errorf("temperature is invalid %f", wc.Temperature))
+	if wc.Temperature != nil && (*wc.Temperature < -50 || *wc.Temperature > 100) {
+		errs = append(errs, fmt.Errorf("temperature is invalid %f", *wc.Temperature))
 	}
 
 	return valid, errors.Join(errs...)
@@ -91,20 +91,31 @@ func (wc *WasteContainer) Handle(ctx context.Context, itm messaging.IncomingTopi
 
 	if wc.WasteContainer == nil {
 		if t, err := tc.FindByID(ctx, wc.ID); err == nil {
-			wc.WasteContainer = &t			
+			wc.WasteContainer = &t
 		}
 	}
 
 	if m.Level != nil {
-		if wc.Level != m.Level.Current {
-			wc.Level = m.Level.Current
+		if wc.Level != nil && *wc.Level != m.Level.Current {
+			wc.Level = &m.Level.Current
+			changed = true
+		}
+
+		if wc.Level == nil {
+			wc.Level = &m.Level.Current
 			changed = true
 		}
 
 		if m.Level.Percent != nil {
 			incoming := math.Round(*m.Level.Percent)
-			if wc.Percent != incoming {
-				wc.Percent = incoming
+
+			if wc.Percent != nil && *wc.Percent != incoming {
+				wc.Percent = &incoming
+				changed = true
+			}
+
+			if wc.Percent == nil {
+				wc.Percent = &incoming
 				changed = true
 			}
 		}
@@ -123,7 +134,7 @@ func (wc *WasteContainer) Handle(ctx context.Context, itm messaging.IncomingTopi
 		log.Warn("waste container has invalid values", "err", err.Error())
 	}
 
-	if m.Pack == nil {		
+	if m.Pack == nil {
 		return changed, nil
 	}
 
@@ -131,8 +142,12 @@ func (wc *WasteContainer) Handle(ctx context.Context, itm messaging.IncomingTopi
 	if recOk {
 		t, valueOk := sensorValue.GetValue()
 		if valueOk {
-			if wc.Temperature != t {
-				wc.Temperature = t
+			if wc.Temperature != nil && *wc.Temperature != t {
+				wc.Temperature = &t
+			}
+
+			if wc.Temperature == nil {
+				wc.Temperature = &t
 				changed = true
 			}
 		}
