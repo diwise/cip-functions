@@ -78,7 +78,7 @@ func RegisterMessageHandlers(app App) error {
 	}
 
 	// Sewer
-	err = app.msgCtx.RegisterTopicMessageHandlerWithFilter(FunctionUpdatedTopic, newMessageAcceptedMessageHandler(app, sewer.SewerFactory), DistanceMessageFilter)
+	err = app.msgCtx.RegisterTopicMessageHandlerWithFilter(MessageAcceptedTopic, newMessageAcceptedMessageHandler(app, sewer.SewerFactory), DistanceMessageFilter)
 	if err != nil {
 		errs = append(errs, err)
 	}
