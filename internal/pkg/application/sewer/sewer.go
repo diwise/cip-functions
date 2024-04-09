@@ -46,7 +46,6 @@ func (s *Sewer) Handle(ctx context.Context, itm messaging.IncomingTopicMessage, 
 	changed := false
 
 	m := struct {
-		ID        string      `json:"id,omitempty"`
 		Pack      *senml.Pack `json:"pack,omitempty"`
 		Timestamp time.Time   `json:"timestamp"`
 	}{}
