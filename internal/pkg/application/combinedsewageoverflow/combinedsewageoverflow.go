@@ -91,11 +91,11 @@ func (cso *CombinedSewageOverflow) Handle(ctx context.Context, itm messaging.Inc
 	}
 
 	if sw.StartTime.IsZero() {
-		return false, fmt.Errorf("start time is Zero")		
+		return false, fmt.Errorf("start time is Zero")
 	}
 
 	idx, isNew := getOverflowForStartTime(cso, sw.StartTime, sw.State)
-	
+
 	if cso.Overflows[idx].StopTime != nil {
 		return changed, fmt.Errorf("current overflow already ended")
 	}
