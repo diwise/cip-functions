@@ -11,6 +11,7 @@ import (
 
 	"github.com/diwise/cip-functions/internal/pkg/application/things"
 	"github.com/diwise/messaging-golang/pkg/messaging"
+	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
 	"github.com/google/uuid"
 )
 
@@ -85,16 +86,33 @@ func getStopwatch(itm messaging.IncomingTopicMessage) (*stopwatch, error) {
 func (cso *CombinedSewageOverflow) Handle(ctx context.Context, itm messaging.IncomingTopicMessage, tc things.Client) (bool, error) {
 	changed := false
 
+	logger := logging.GetFromContext(ctx)
+
+	log := func(msg string, v any) {
+		b, _ := json.MarshalIndent(v, "", " ")
+		logger.Debug(fmt.Sprintf("%s: %s", msg, string(b)))
+	}
+
 	sw, err := getStopwatch(itm)
 	if err != nil {
 		return changed, err
 	}
+
+	if sw == nil {
+		return false, fmt.Errorf("stopwatch is nil")
+	}
+
+	//TODO: remove logging
+
+	log("incoming stopwatch", sw)
 
 	if sw.StartTime.IsZero() {
 		return false, fmt.Errorf("start time is Zero")
 	}
 
 	idx, isNew := getOverflowForStartTime(cso, sw.StartTime, sw.State)
+
+	logger.Debug(fmt.Sprintf("overflow index: %d, new: %t", idx, isNew))
 
 	if cso.Overflows[idx].StopTime != nil {
 		return changed, fmt.Errorf("current overflow already ended")
@@ -106,19 +124,30 @@ func (cso *CombinedSewageOverflow) Handle(ctx context.Context, itm messaging.Inc
 		}
 	}
 
+	log("current", cso)
+
 	if cso.Overflows[idx].State != sw.State {
 		if sw.State {
+			logger.Debug("stopwatch is On")
+
 			if sw.Duration != nil {
+				logger.Debug("use duration from stopwatch")
 				cso.Overflows[idx].Duration = *sw.Duration
 			}
 
 			if sw.Duration == nil {
+				logger.Debug("calc duration since start time")
 				cso.Overflows[idx].Duration = time.Since(cso.Overflows[idx].StartTime)
 			}
 		}
 
 		if !sw.State {
+			logger.Debug("stopwatch is Off")
+
 			cso.Overflows[idx].StopTime = sw.StopTime
+			if cso.Overflows[idx].StopTime == nil {
+				return false, fmt.Errorf("stop time is nil for overflow")
+			}
 
 			if sw.Duration != nil {
 				cso.Overflows[idx].Duration = *sw.Duration
@@ -136,6 +165,8 @@ func (cso *CombinedSewageOverflow) Handle(ctx context.Context, itm messaging.Inc
 
 		cso.CumulativeTime = time.Duration(cumulativeTime)
 		cso.Overflows[idx].State = sw.State
+
+		log("new state", cso)
 
 		changed = true
 	}
