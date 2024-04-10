@@ -84,7 +84,6 @@ func (jds *JsonDataStore) Create(ctx context.Context, id, typeName string, value
 		return err
 	}
 
-
 	logging.GetFromContext(ctx).Debug(fmt.Sprintf("create %s of type %s in database", id, typeName))
 
 	return nil

@@ -21,3 +21,7 @@ var DigitalInputMessageFilter = func(m messaging.Message) bool {
 var TemperatureMessageFilter = func(m messaging.Message) bool {
 	return strings.HasPrefix(m.ContentType(), "application/vnd.oma.lwm2m.ext.3303")
 }
+
+var DistanceMessageFilter = func(m messaging.Message) bool {
+	return strings.HasPrefix(m.ContentType(), "application/vnd.oma.lwm2m.ext.3330")
+}

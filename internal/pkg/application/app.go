@@ -78,7 +78,7 @@ func RegisterMessageHandlers(app App) error {
 	}
 
 	// Sewer
-	err = app.msgCtx.RegisterTopicMessageHandlerWithFilter(FunctionUpdatedTopic, newFunctionUpdatedHandler(app, sewer.SewerFactory), LevelMessageFilter)
+	err = app.msgCtx.RegisterTopicMessageHandlerWithFilter(MessageAcceptedTopic, newMessageAcceptedMessageHandler(app, sewer.SewerFactory), DistanceMessageFilter)
 	if err != nil {
 		errs = append(errs, err)
 	}
@@ -90,7 +90,7 @@ func newMessageAcceptedMessageHandler[T CipFunctionHandler](app App, fn func(id,
 	return func(ctx context.Context, itm messaging.IncomingTopicMessage, log *slog.Logger) {
 		var err error
 		t := storage.GetTypeName[T]()
-		
+
 		ctx, span := tracer.Start(ctx, "message.accepted")
 		defer func() { tracing.RecordAnyErrorAndEndSpan(err, span) }()
 		_, ctx, log = o11y.AddTraceIDToLoggerAndStoreInContext(span, log, ctx)
@@ -127,7 +127,7 @@ func newMessageAcceptedMessageHandler[T CipFunctionHandler](app App, fn func(id,
 		if err != nil {
 			log.Error("failed to handle message", "err", err.Error())
 			return
-		}		
+		}
 	}
 }
 
@@ -135,7 +135,7 @@ func newFunctionUpdatedHandler[T CipFunctionHandler](app App, fn func(id, tenant
 	return func(ctx context.Context, itm messaging.IncomingTopicMessage, log *slog.Logger) {
 		var err error
 		t := storage.GetTypeName[T]()
-		
+
 		ctx, span := tracer.Start(ctx, "function.updated")
 		defer func() { tracing.RecordAnyErrorAndEndSpan(err, span) }()
 		_, ctx, log = o11y.AddTraceIDToLoggerAndStoreInContext(span, log, ctx)
@@ -163,7 +163,7 @@ func newFunctionUpdatedHandler[T CipFunctionHandler](app App, fn func(id, tenant
 		if err != nil {
 			log.Error("failed to handle message", "err", err.Error())
 			return
-		}		
+		}
 	}
 }
 
@@ -172,8 +172,8 @@ var mu sync.Mutex
 func process[T CipFunctionHandler](ctx context.Context, app App, id string, itm messaging.IncomingTopicMessage, fn func(id, t string) T) (bool, error) {
 	mu.Lock()
 	defer mu.Unlock()
-	
-	log := logging.GetFromContext(ctx)	
+
+	log := logging.GetFromContext(ctx)
 
 	rel, ok, err := getRelatedThing[T](ctx, app, id)
 	if err != nil {
@@ -249,7 +249,7 @@ func (a App) getRelated(ctx context.Context, id, typeName string) (things.Thing,
 		return strings.EqualFold(t.Type, typeName)
 	})
 
-	if idx == -1 {		
+	if idx == -1 {
 		return things.Thing{}, ErrNoRelatedThingFound
 	}
 
