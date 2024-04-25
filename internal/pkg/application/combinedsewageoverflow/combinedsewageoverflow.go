@@ -19,6 +19,7 @@ var CombinedSewageOverflowFactory = func(id, tenant string) *CombinedSewageOverf
 		ID:     id,
 		Type:   "CombinedSewageOverflow",
 		Tenant: tenant,
+		DateObserved: time.Now().UTC(),		
 	}
 }
 
@@ -104,7 +105,7 @@ func (cso *CombinedSewageOverflow) Handle(ctx context.Context, itm messaging.Inc
 	i, changed := getIndexForOverflow(cso, sw.StartTime)
 
 	overflow := &cso.Overflows[i]
-	
+
 	if overflow.StopTime != nil {
 		return changed, fmt.Errorf("current overflow already ended")
 	}
@@ -118,6 +119,8 @@ func (cso *CombinedSewageOverflow) Handle(ctx context.Context, itm messaging.Inc
 			if sw.Duration == nil {
 				overflow.Duration = time.Now().UTC().Sub(overflow.StartTime.UTC())
 			}
+
+			cso.DateObserved = overflow.StartTime.UTC()
 		}
 
 		if !sw.State {
@@ -130,6 +133,8 @@ func (cso *CombinedSewageOverflow) Handle(ctx context.Context, itm messaging.Inc
 			if sw.Duration == nil {
 				overflow.Duration = overflow.StopTime.UTC().Sub(overflow.StartTime.UTC())
 			}
+
+			cso.DateObserved = overflow.StopTime.UTC()
 		}
 
 		overflow.State = sw.State
@@ -153,10 +158,6 @@ func (cso *CombinedSewageOverflow) Handle(ctx context.Context, itm messaging.Inc
 	if cso.State != cso.Overflows[len(cso.Overflows)-1].State {
 		cso.State = cso.Overflows[len(cso.Overflows)-1].State
 		changed = true
-	}
-
-	if cso.DateObserved.IsZero() || changed {
-		cso.DateObserved = time.Now().UTC()
 	}
 
 	return changed, nil

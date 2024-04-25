@@ -97,8 +97,6 @@ func (tc ClientImpl) findByID(ctx context.Context, thingID string) (*JsonApiResp
 
 	cachedItem, found := tc.cache.Get(url)
 	if found {
-		log.Debug(fmt.Sprintf("found response for %s in cache", url))
-
 		jar, ok := cachedItem.(JsonApiResponse)
 		if ok {
 			return &jar, nil
