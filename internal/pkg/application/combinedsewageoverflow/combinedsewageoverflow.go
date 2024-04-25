@@ -92,7 +92,7 @@ func (cso *CombinedSewageOverflow) Handle(ctx context.Context, itm messaging.Inc
 	}
 
 	if sw.StartTime.IsZero() {
-		return false, fmt.Errorf("start time is Zero")
+		return false, fmt.Errorf("start time is zero")
 	}
 
 	if cso.CombinedSewageOverflow == nil {
@@ -116,7 +116,7 @@ func (cso *CombinedSewageOverflow) Handle(ctx context.Context, itm messaging.Inc
 			}
 
 			if sw.Duration == nil {
-				overflow.Duration = time.Since(overflow.StartTime)
+				overflow.Duration = time.Now().UTC().Sub(overflow.StartTime.UTC())
 			}
 		}
 
@@ -128,7 +128,7 @@ func (cso *CombinedSewageOverflow) Handle(ctx context.Context, itm messaging.Inc
 			}
 
 			if sw.Duration == nil {
-				overflow.Duration = overflow.StopTime.Sub(overflow.StartTime)
+				overflow.Duration = overflow.StopTime.UTC().Sub(overflow.StartTime.UTC())
 			}
 		}
 
@@ -173,7 +173,7 @@ func getIndexForOverflow(cso *CombinedSewageOverflow, t time.Time) (int, bool) {
 		return idx, false
 	}
 
-	overflow := Overflow{ID: overflowID, StartTime: t, State: false}
+	overflow := Overflow{ID: overflowID, StartTime: t.UTC(), State: false, Duration: 0}
 	cso.Overflows = append(cso.Overflows, overflow)
 
 	idx = slices.IndexFunc(cso.Overflows, func(o Overflow) bool {

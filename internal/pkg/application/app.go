@@ -22,6 +22,7 @@ import (
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/tracing"
+	"github.com/google/uuid"
 	"go.opentelemetry.io/otel"
 )
 
@@ -38,47 +39,26 @@ type App struct {
 	store        storage.Storage
 }
 
-func New(msgCtx messaging.MsgContext, tc things.Client, s storage.Storage) App {
-	return App{
+func New(msgCtx messaging.MsgContext, tc things.Client, s storage.Storage) (App, error) {
+	app := App{
 		msgCtx:       msgCtx,
 		thingsClient: tc,
 		store:        s,
 	}
+
+	return app, app.registerMessageHandlers()
 }
 
-const (
-	FunctionUpdatedTopic string = "function.updated"
-	MessageAcceptedTopic string = "message.accepted"
-)
-
-func RegisterMessageHandlers(app App) error {
+func (a App) registerMessageHandlers() error {
 	var err error
 	var errs []error
 
-	// Waste container
-	err = app.msgCtx.RegisterTopicMessageHandlerWithFilter(FunctionUpdatedTopic, newFunctionUpdatedHandler(app, wastecontainer.WasteContainerFactory), LevelMessageFilter)
-	if err != nil {
-		errs = append(errs, err)
-	}
-	err = app.msgCtx.RegisterTopicMessageHandlerWithFilter(MessageAcceptedTopic, newMessageAcceptedMessageHandler(app, wastecontainer.WasteContainerFactory), TemperatureMessageFilter)
+	err = a.msgCtx.RegisterTopicMessageHandler("function.updated", newFunctionUpdatedHandler(a))
 	if err != nil {
 		errs = append(errs, err)
 	}
 
-	// Combined sewer overflow
-	err = app.msgCtx.RegisterTopicMessageHandlerWithFilter(FunctionUpdatedTopic, newFunctionUpdatedHandler(app, combinedsewageoverflow.CombinedSewageOverflowFactory), StopwatchMessageFilter)
-	if err != nil {
-		errs = append(errs, err)
-	}
-
-	// Sewage pumping station
-	err = app.msgCtx.RegisterTopicMessageHandlerWithFilter(FunctionUpdatedTopic, newFunctionUpdatedHandler(app, sewagepumpingstation.SewagePumpingStationFactory), DigitalInputMessageFilter)
-	if err != nil {
-		errs = append(errs, err)
-	}
-
-	// Sewer
-	err = app.msgCtx.RegisterTopicMessageHandlerWithFilter(MessageAcceptedTopic, newMessageAcceptedMessageHandler(app, sewer.SewerFactory), DistanceMessageFilter)
+	err = a.msgCtx.RegisterTopicMessageHandler("message.accepted", newMessageAcceptedHandler(a))
 	if err != nil {
 		errs = append(errs, err)
 	}
@@ -86,90 +66,133 @@ func RegisterMessageHandlers(app App) error {
 	return errors.Join(errs...)
 }
 
-func newMessageAcceptedMessageHandler[T CipFunctionHandler](app App, fn func(id, tenant string) T) messaging.TopicMessageHandler {
-	return func(ctx context.Context, itm messaging.IncomingTopicMessage, log *slog.Logger) {
+func newMessageAcceptedHandler(app App) messaging.TopicMessageHandler {
+	return func(ctx context.Context, itm messaging.IncomingTopicMessage, l *slog.Logger) {
 		var err error
-		t := storage.GetTypeName[T]()
 
 		ctx, span := tracer.Start(ctx, "message.accepted")
 		defer func() { tracing.RecordAnyErrorAndEndSpan(err, span) }()
-		_, ctx, log = o11y.AddTraceIDToLoggerAndStoreInContext(span, log, ctx)
+		_, ctx, l = o11y.AddTraceIDToLoggerAndStoreInContext(span, l, ctx)
 
-		m := struct {
-			Pack      senml.Pack `json:"pack"`
-			Timestamp time.Time  `json:"timestamp"`
-		}{}
+		l = l.With(slog.String("uuid", uuid.NewString()))
+		ctx = logging.NewContextWithLogger(ctx, l)
 
-		err = json.Unmarshal(itm.Body(), &m)
-		if err != nil {
-			log.Error("unmarshal error", "err", err.Error())
+		if TemperatureMessageFilter(itm) {
+			handleMessageAcceptedMessage(ctx, app, itm, wastecontainer.WasteContainerFactory, l)
 			return
 		}
 
-		r, ok := m.Pack.GetRecord(senml.FindByName("0"))
-		if !ok {
-			log.Error("package contains no deviceID")
-			return
-		}
-
-		deviceID := strings.Split(r.Name, "/")[0]
-		if deviceID == "" {
-			b, _ := json.Marshal(m)
-			log.Error("deviceID is empty")
-			log.Debug("deviceID is empty", "message", string(b))
-			return
-		}
-
-		log = log.With(slog.String("id", deviceID), slog.String("type", t))
-		ctx = logging.NewContextWithLogger(ctx, log)
-
-		_, err = process(ctx, app, deviceID, itm, fn)
-		if err != nil {
-			log.Error("failed to handle message", "err", err.Error())
+		if DistanceMessageFilter(itm) {
+			handleMessageAcceptedMessage(ctx, app, itm, sewer.SewerFactory, l)
 			return
 		}
 	}
 }
 
-func newFunctionUpdatedHandler[T CipFunctionHandler](app App, fn func(id, tenant string) T) messaging.TopicMessageHandler {
-	return func(ctx context.Context, itm messaging.IncomingTopicMessage, log *slog.Logger) {
+func newFunctionUpdatedHandler(app App) messaging.TopicMessageHandler {
+	return func(ctx context.Context, itm messaging.IncomingTopicMessage, l *slog.Logger) {
 		var err error
-		t := storage.GetTypeName[T]()
 
 		ctx, span := tracer.Start(ctx, "function.updated")
 		defer func() { tracing.RecordAnyErrorAndEndSpan(err, span) }()
-		_, ctx, log = o11y.AddTraceIDToLoggerAndStoreInContext(span, log, ctx)
+		_, ctx, l = o11y.AddTraceIDToLoggerAndStoreInContext(span, l, ctx)
 
-		f := struct {
-			ID string `json:"id,omitempty"`
-		}{}
+		l = l.With(slog.String("uuid", uuid.NewString()))
+		ctx = logging.NewContextWithLogger(ctx, l)
 
-		err = json.Unmarshal(itm.Body(), &f)
-		if err != nil {
-			log.Error("unmarshal error", "err", err.Error())
+		if LevelMessageFilter(itm) {
+			handleFunctionUpdatedMessage(ctx, app, itm, wastecontainer.WasteContainerFactory, l)
 			return
 		}
 
-		if f.ID == "" {
-			log.Error("ID is empty")
-			log.Debug("ID is empty", "message", string(itm.Body()))
+		if StopwatchMessageFilter(itm) {
+			handleFunctionUpdatedMessage(ctx, app, itm, combinedsewageoverflow.CombinedSewageOverflowFactory, l)
 			return
 		}
 
-		log = log.With(slog.String("id", f.ID), slog.String("type", t))
-		ctx = logging.NewContextWithLogger(ctx, log)
-
-		_, err = process(ctx, app, f.ID, itm, fn)
-		if err != nil {
-			log.Error("failed to handle message", "err", err.Error())
+		if DigitalInputMessageFilter(itm) {
+			handleFunctionUpdatedMessage(ctx, app, itm, sewagepumpingstation.SewagePumpingStationFactory, l)
 			return
 		}
 	}
+}
+
+func handleMessageAcceptedMessage[T CipFunctionHandler](ctx context.Context, app App, itm messaging.IncomingTopicMessage, factoryFn func(id, tenant string) T, log *slog.Logger) error {
+	var err error
+	t := storage.GetTypeName[T]()
+
+	m := struct {
+		Pack      senml.Pack `json:"pack"`
+		Timestamp time.Time  `json:"timestamp"`
+	}{}
+
+	err = json.Unmarshal(itm.Body(), &m)
+	if err != nil {
+		log.Error("unmarshal error", "err", err.Error())
+		return err
+	}
+
+	r, ok := m.Pack.GetRecord(senml.FindByName("0"))
+	if !ok {
+		log.Error("package contains no deviceID")
+		return err
+	}
+
+	deviceID := strings.Split(r.Name, "/")[0]
+	if deviceID == "" {
+		b, _ := json.Marshal(m)
+		log.Error("deviceID is empty")
+		log.Debug("deviceID is empty", "message", string(b))
+		return err
+	}
+
+	log = log.With(slog.String("id", deviceID), slog.String("type", t))
+	ctx = logging.NewContextWithLogger(ctx, log)
+
+	_, err = processIncomingTopicMessage(ctx, app, deviceID, itm, factoryFn)
+	if err != nil {
+		log.Error("failed to handle message", "err", err.Error())
+		return err
+	}
+
+	return nil
+}
+
+func handleFunctionUpdatedMessage[T CipFunctionHandler](ctx context.Context, app App, itm messaging.IncomingTopicMessage, factoryFn func(id, tenant string) T, log *slog.Logger) error {
+	var err error
+
+	f := struct {
+		ID string `json:"id,omitempty"`
+	}{}
+
+	err = json.Unmarshal(itm.Body(), &f)
+	if err != nil {
+		log.Error("unmarshal error", "err", err.Error())
+		return err
+	}
+
+	if f.ID == "" {
+		log.Error("ID is empty")
+		log.Debug("ID is empty", "message", string(itm.Body()))
+		return err
+	}
+
+	t := storage.GetTypeName[T]()
+	log = log.With(slog.String("id", f.ID), slog.String("type", t))
+	ctx = logging.NewContextWithLogger(ctx, log)
+
+	_, err = processIncomingTopicMessage(ctx, app, f.ID, itm, factoryFn)
+	if err != nil {
+		log.Error("failed to handle message", "err", err.Error())
+		return err
+	}
+
+	return nil
 }
 
 var mu sync.Mutex
 
-func process[T CipFunctionHandler](ctx context.Context, app App, id string, itm messaging.IncomingTopicMessage, fn func(id, t string) T) (bool, error) {
+func processIncomingTopicMessage[T CipFunctionHandler](ctx context.Context, app App, id string, itm messaging.IncomingTopicMessage, fn func(id, t string) T) (bool, error) {
 	mu.Lock()
 	defer mu.Unlock()
 
@@ -228,6 +251,20 @@ func process[T CipFunctionHandler](ctx context.Context, app App, id string, itm 
 
 var ErrNoRelatedThingFound = fmt.Errorf("no related thing found")
 
+func getRelatedThing[T any](ctx context.Context, app App, id string) (things.Thing, bool, error) {
+	typeName := storage.GetTypeName[T]()
+
+	t, err := app.getRelated(ctx, id, typeName)
+	if err != nil {
+		if errors.Is(err, ErrNoRelatedThingFound) {
+			return things.Thing{}, false, nil
+		}
+		return things.Thing{}, false, err
+	}
+
+	return t, true, nil
+}
+
 func (a App) getRelated(ctx context.Context, id, typeName string) (things.Thing, error) {
 	log := logging.GetFromContext(ctx)
 
@@ -254,18 +291,4 @@ func (a App) getRelated(ctx context.Context, id, typeName string) (things.Thing,
 	}
 
 	return ts[idx], nil
-}
-
-func getRelatedThing[T any](ctx context.Context, app App, id string) (things.Thing, bool, error) {
-	typeName := storage.GetTypeName[T]()
-
-	t, err := app.getRelated(ctx, id, typeName)
-	if err != nil {
-		if errors.Is(err, ErrNoRelatedThingFound) {
-			return things.Thing{}, false, nil
-		}
-		return things.Thing{}, false, err
-	}
-
-	return t, true, nil
 }
