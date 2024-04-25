@@ -87,10 +87,9 @@ func createThingsClientOrDie(ctx context.Context) *things.ClientImpl {
 }
 
 func initialize(ctx context.Context, msgctx messaging.MsgContext, tc things.Client, storage storage.Storage) (application.App, error) {
-	app := application.New(msgctx, tc, storage)
-	err := application.RegisterMessageHandlers(app)
+	app, err := application.New(msgctx, tc, storage)
 	if err != nil {
-		fatal(ctx, "failed to register handlers", err)
+		fatal(ctx, "failed to initialize application", err)
 	}
 
 	return app, err

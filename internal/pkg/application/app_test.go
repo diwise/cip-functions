@@ -67,15 +67,15 @@ func TestGenericHandler(t *testing.T) {
 		},
 	}
 
-	app := New(msgCtx, tc, s)
+	app, _ := New(msgCtx, tc, s)
 
-	newFunctionUpdatedHandler(app, func(id, tenant string) *wastecontainer.WasteContainer {
+	handleFunctionUpdatedMessage(ctx, app, itm, func(id, tenant string) *wastecontainer.WasteContainer {
 		return &wastecontainer.WasteContainer{
 			ID:     id,
 			Type:   "WasteContainer",
 			Tenant: tenant,
 		}
-	})(ctx, itm, log)
+	}, log)
 
 	is.Equal(60.0, *memStore["WasteContainer:72fb1b1c-d574-4946-befe-0ad1ba57bcf4"].(*wastecontainer.WasteContainer).Percent)
 }
@@ -86,7 +86,7 @@ func TestCombinedSewageOverflowIntegrationTest(t *testing.T) {
 		t.Skip()
 	}
 
-	app := New(msgCtx, tc, s)
+	app, _ := New(msgCtx, tc, s)
 
 	startTime := time.Now()
 
@@ -100,7 +100,7 @@ func TestCombinedSewageOverflowIntegrationTest(t *testing.T) {
 		},
 	}
 
-	_, err := process(ctx, app, "25e185f6-bdba-4c68-b6e8-23ae2bb10254", itm, combinedsewageoverflow.CombinedSewageOverflowFactory)
+	_, err := processIncomingTopicMessage(ctx, app, "25e185f6-bdba-4c68-b6e8-23ae2bb10254", itm, combinedsewageoverflow.CombinedSewageOverflowFactory)
 	is.NoErr(err)
 }
 
@@ -131,6 +131,10 @@ func setupIntegrationTest(t *testing.T) (*is.I, *messaging.MsgContextMock, *thin
 	}
 
 	msgCtx.PublishOnTopicFunc = func(ctx context.Context, message messaging.TopicMessage) error {
+		return nil
+	}
+
+	msgCtx.RegisterTopicMessageHandlerFunc = func(routingKey string, handler messaging.TopicMessageHandler) error {
 		return nil
 	}
 
@@ -193,6 +197,10 @@ func setup(t *testing.T, store map[string]any) (*is.I, *messaging.MsgContextMock
 			Type:   "WasteContainer",
 			Tenant: tenant,
 		}, nil
+	}
+
+	msgCtx.RegisterTopicMessageHandlerFunc = func(routingKey string, handler messaging.TopicMessageHandler) error {
+		return nil
 	}
 
 	msgCtx.PublishOnTopicFunc = func(ctx context.Context, message messaging.TopicMessage) error {
