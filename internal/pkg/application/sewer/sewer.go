@@ -3,14 +3,12 @@ package sewer
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"math"
 	"time"
 
 	"github.com/diwise/cip-functions/internal/pkg/application/things"
 	"github.com/diwise/messaging-golang/pkg/messaging"
 	"github.com/diwise/senml"
-	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
 )
 
 var SewerFactory = func(id, tenant string) *Sewer {
@@ -47,8 +45,6 @@ func (s *Sewer) Handle(ctx context.Context, itm messaging.IncomingTopicMessage, 
 	var err error
 	changed := false
 
-	log := logging.GetFromContext(ctx)
-
 	m := struct {
 		Pack      *senml.Pack `json:"pack,omitempty"`
 		Timestamp time.Time   `json:"timestamp"`
@@ -62,8 +58,6 @@ func (s *Sewer) Handle(ctx context.Context, itm messaging.IncomingTopicMessage, 
 		return false, nil
 	}
 
-	log.Debug("handle distance in sewer function")
-
 	if s.Sewer == nil {
 		if t, err := tc.FindByID(ctx, s.ID); err == nil {
 			s.Sewer = &t
@@ -76,10 +70,8 @@ func (s *Sewer) Handle(ctx context.Context, itm messaging.IncomingTopicMessage, 
 
 	sensorValue, recOk := m.Pack.GetRecord(senml.FindByName("5700"))
 	if recOk {
-		distance, valueOk := sensorValue.GetValue()		
+		distance, valueOk := sensorValue.GetValue()
 		if valueOk {
-			log.Debug(fmt.Sprintf("current distance %f, incoming distance %f", s.Distance, distance))
-
 			if !eq(s.Distance, distance) {
 				s.Distance = distance
 				changed = true
@@ -87,10 +79,8 @@ func (s *Sewer) Handle(ctx context.Context, itm messaging.IncomingTopicMessage, 
 		}
 
 		ts, timeOk := sensorValue.GetTime()
-		if timeOk {			
+		if timeOk {
 			if ts.After(s.DateObserved) {
-				log.Debug("set time from record")
-				
 				s.DateObserved = ts
 				changed = true
 			}

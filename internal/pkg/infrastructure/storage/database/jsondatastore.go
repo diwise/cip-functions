@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"github.com/diwise/service-chassis/pkg/infrastructure/env"
-	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -84,8 +83,6 @@ func (jds *JsonDataStore) Create(ctx context.Context, id, typeName string, value
 		return err
 	}
 
-	logging.GetFromContext(ctx).Debug(fmt.Sprintf("create %s of type %s in database", id, typeName))
-
 	return nil
 }
 
@@ -100,8 +97,6 @@ func (jds *JsonDataStore) Update(ctx context.Context, id, typeName string, value
 		return err
 	}
 
-	logging.GetFromContext(ctx).Debug(fmt.Sprintf("update %s of type %s in database", id, typeName))
-
 	return nil
 }
 
@@ -112,8 +107,6 @@ func (jds *JsonDataStore) Read(ctx context.Context, id, typeName string) (any, e
 	if err != nil {
 		return nil, err
 	}
-
-	logging.GetFromContext(ctx).Debug(fmt.Sprintf("read %s of type %s from database", id, typeName))
 
 	return obj, nil
 }

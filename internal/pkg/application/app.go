@@ -119,7 +119,6 @@ func newFunctionUpdatedHandler(app App) messaging.TopicMessageHandler {
 
 func handleMessageAcceptedMessage[T CipFunctionHandler](ctx context.Context, app App, itm messaging.IncomingTopicMessage, factoryFn func(id, tenant string) T, log *slog.Logger) error {
 	var err error
-	t := storage.GetTypeName[T]()
 
 	m := struct {
 		Pack      senml.Pack `json:"pack"`
@@ -146,7 +145,7 @@ func handleMessageAcceptedMessage[T CipFunctionHandler](ctx context.Context, app
 		return err
 	}
 
-	log = log.With(slog.String("id", deviceID), slog.String("type", t))
+	log = log.With(slog.String("device_id", deviceID))
 	ctx = logging.NewContextWithLogger(ctx, log)
 
 	_, err = processIncomingTopicMessage(ctx, app, deviceID, itm, factoryFn)
@@ -177,8 +176,7 @@ func handleFunctionUpdatedMessage[T CipFunctionHandler](ctx context.Context, app
 		return err
 	}
 
-	t := storage.GetTypeName[T]()
-	log = log.With(slog.String("id", f.ID), slog.String("type", t))
+	log = log.With(slog.String("function_id", f.ID))
 	ctx = logging.NewContextWithLogger(ctx, log)
 
 	_, err = processIncomingTopicMessage(ctx, app, f.ID, itm, factoryFn)
@@ -197,6 +195,8 @@ func processIncomingTopicMessage[T CipFunctionHandler](ctx context.Context, app 
 	defer mu.Unlock()
 
 	log := logging.GetFromContext(ctx)
+	log = log.With(slog.String("type", storage.GetTypeName[T]()))
+	ctx = logging.NewContextWithLogger(ctx, log)
 
 	rel, ok, err := getRelatedThing[T](ctx, app, id)
 	if err != nil {
@@ -205,11 +205,10 @@ func processIncomingTopicMessage[T CipFunctionHandler](ctx context.Context, app 
 	}
 
 	if !ok {
-		log.Debug("no related thing found")
 		return false, nil
 	}
 
-	log = log.With(slog.String("rel_id", rel.Id))
+	log = log.With(slog.String("thing_id", rel.Id))
 	ctx = logging.NewContextWithLogger(ctx, log)
 
 	tenant := "default"
@@ -219,7 +218,7 @@ func processIncomingTopicMessage[T CipFunctionHandler](ctx context.Context, app 
 
 	state, err := storage.GetOrDefault(ctx, app.store, rel.Id, fn(rel.Id, tenant))
 	if err != nil {
-		log.Error("could not get or create current state", "id", rel.Id, "type", rel.Type, "err", err.Error())
+		log.Error("could not get or create current state", "err", err.Error())
 		return false, err
 	}
 
@@ -230,7 +229,6 @@ func processIncomingTopicMessage[T CipFunctionHandler](ctx context.Context, app 
 	}
 
 	if !change {
-		log.Debug("no state change detected")
 		return false, nil
 	}
 
@@ -245,6 +243,8 @@ func processIncomingTopicMessage[T CipFunctionHandler](ctx context.Context, app 
 		log.Error("could not publish message", "err", err.Error())
 		return change, err
 	}
+
+	log.Debug("handled incoming message", slog.String("in", itm.ContentType()), slog.String("out", state.ContentType()))
 
 	return change, nil
 }
