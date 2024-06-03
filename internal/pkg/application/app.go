@@ -69,22 +69,31 @@ func (a App) registerMessageHandlers() error {
 func newMessageAcceptedHandler(app App) messaging.TopicMessageHandler {
 	return func(ctx context.Context, itm messaging.IncomingTopicMessage, l *slog.Logger) {
 		var err error
+		var errs []error
 
 		ctx, span := tracer.Start(ctx, "message.accepted")
 		defer func() { tracing.RecordAnyErrorAndEndSpan(err, span) }()
 		_, ctx, l = o11y.AddTraceIDToLoggerAndStoreInContext(span, l, ctx)
 
-		l = l.With(slog.String("uuid", uuid.NewString()))
-		ctx = logging.NewContextWithLogger(ctx, l)
+		ctx = logging.NewContextWithLogger(ctx, l, slog.String("uuid", uuid.NewString()))
 
 		if TemperatureMessageFilter(itm) {
-			handleMessageAcceptedMessage(ctx, app, itm, wastecontainer.WasteContainerFactory, l)
-			return
+			err = handleMessageAcceptedMessage(ctx, app, itm, wastecontainer.WasteContainerFactory, l)
+			if err != nil {
+				errs = append(errs, err)
+			}
 		}
 
 		if DistanceMessageFilter(itm) {
-			handleMessageAcceptedMessage(ctx, app, itm, sewer.SewerFactory, l)
-			return
+			err = handleMessageAcceptedMessage(ctx, app, itm, sewer.SewerFactory, l)
+			if err != nil {
+				errs = append(errs, err)
+			}
+		}
+
+		err = errors.Join(errs...)
+		if err != nil {
+			l.Error("could not handle message.accepted without errors", "err", err.Error())
 		}
 	}
 }
@@ -92,27 +101,42 @@ func newMessageAcceptedHandler(app App) messaging.TopicMessageHandler {
 func newFunctionUpdatedHandler(app App) messaging.TopicMessageHandler {
 	return func(ctx context.Context, itm messaging.IncomingTopicMessage, l *slog.Logger) {
 		var err error
+		var errs []error
 
 		ctx, span := tracer.Start(ctx, "function.updated")
 		defer func() { tracing.RecordAnyErrorAndEndSpan(err, span) }()
 		_, ctx, l = o11y.AddTraceIDToLoggerAndStoreInContext(span, l, ctx)
 
-		l = l.With(slog.String("uuid", uuid.NewString()))
-		ctx = logging.NewContextWithLogger(ctx, l)
+		ctx = logging.NewContextWithLogger(ctx, l, slog.String("uuid", uuid.NewString()))
 
 		if LevelMessageFilter(itm) {
-			handleFunctionUpdatedMessage(ctx, app, itm, wastecontainer.WasteContainerFactory, l)
-			return
+			err = handleFunctionUpdatedMessage(ctx, app, itm, wastecontainer.WasteContainerFactory, l)
+			if err != nil {
+				errs = append(errs, err)
+			}
+			err = handleFunctionUpdatedMessage(ctx, app, itm, sewer.SewerFactory, l)
+			if err != nil {
+				errs = append(errs, err)
+			}
 		}
 
 		if StopwatchMessageFilter(itm) {
-			handleFunctionUpdatedMessage(ctx, app, itm, combinedsewageoverflow.CombinedSewageOverflowFactory, l)
-			return
+			err = handleFunctionUpdatedMessage(ctx, app, itm, combinedsewageoverflow.CombinedSewageOverflowFactory, l)
+			if err != nil {
+				errs = append(errs, err)
+			}
 		}
 
 		if DigitalInputMessageFilter(itm) {
-			handleFunctionUpdatedMessage(ctx, app, itm, sewagepumpingstation.SewagePumpingStationFactory, l)
-			return
+			err = handleFunctionUpdatedMessage(ctx, app, itm, sewagepumpingstation.SewagePumpingStationFactory, l)
+			if err != nil {
+				errs = append(errs, err)
+			}
+		}
+
+		err = errors.Join(errs...)
+		if err != nil {
+			l.Error("could not handle function.updated without errors", "err", err.Error())
 		}
 	}
 }
