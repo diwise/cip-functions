@@ -22,8 +22,8 @@ var SewerFactory = func(id, tenant string) *Sewer {
 type Sewer struct {
 	ID           string        `json:"id"`
 	Type         string        `json:"type"`
-	Distance     float64       `json:"distance"`
 	Level        float64       `json:"level"`
+	Percent      *float64       `json:"percent,omitempty"`
 	DateObserved time.Time     `json:"dateObserved"`
 	Tenant       string        `json:"tenant"`
 	Sewer        *things.Thing `json:"sewer,omitempty"`
@@ -46,8 +46,11 @@ func (s *Sewer) Handle(ctx context.Context, itm messaging.IncomingTopicMessage, 
 	var err error
 	changed := false
 
-	eq := func(a, b float64) bool {
-		return math.Abs(a-b) <= 0.0001
+	eq := func(a, b *float64) bool {
+		if a != nil && b != nil {
+			return math.Abs(*a-*b) <= 0.0001
+		}
+		return false
 	}
 
 	m := struct {
@@ -80,8 +83,8 @@ func (s *Sewer) Handle(ctx context.Context, itm messaging.IncomingTopicMessage, 
 		if recOk {
 			distance, valueOk := sensorValue.GetValue()
 			if valueOk {
-				if !eq(s.Distance, distance) {
-					s.Distance = distance
+				if !eq(&s.Level, &distance) {
+					s.Level = distance
 					changed = true
 				}
 			}
@@ -102,18 +105,18 @@ func (s *Sewer) Handle(ctx context.Context, itm messaging.IncomingTopicMessage, 
 	}
 
 	if m.Level != nil {
-		if !eq(s.Distance, m.Level.Current) {
-			s.Distance = m.Level.Current
+		if !eq(&s.Level, &m.Level.Current) {
+			s.Level = m.Level.Current
 			changed = true
 		}
 		if m.Level.Percent != nil {
-			if !eq(s.Level, *m.Level.Percent) {
-				s.Level = *m.Level.Percent
+			if !eq(s.Percent, m.Level.Percent) {
+				s.Percent = m.Level.Percent
 				changed = true
 			}
 		}
 		if changed && m.Timestamp.After(s.DateObserved) {
-			s.DateObserved = m.Timestamp			
+			s.DateObserved = m.Timestamp
 		}
 	}
 
