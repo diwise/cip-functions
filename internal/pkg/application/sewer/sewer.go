@@ -76,21 +76,21 @@ func (s *Sewer) Handle(ctx context.Context, itm messaging.IncomingTopicMessage, 
 
 	sensorValue, recOk := m.Pack.GetRecord(senml.FindByName("5700"))
 	if recOk {
-		distance, valueOk := sensorValue.GetValue()		
+		distance, valueOk := sensorValue.GetValue()
 		if valueOk {
 			log.Debug(fmt.Sprintf("current distance %f, incoming distance %f", s.Distance, distance))
 
 			if !eq(s.Distance, distance) {
 				s.Distance = distance
-				changed = true
 			}
+			changed = true
 		}
 
 		ts, timeOk := sensorValue.GetTime()
-		if timeOk {			
+		if timeOk {
 			if ts.After(s.DateObserved) {
 				log.Debug("set time from record")
-				
+
 				s.DateObserved = ts
 				changed = true
 			}
