@@ -3,12 +3,14 @@ package sewer
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"math"
 	"time"
 
 	"github.com/diwise/cip-functions/internal/pkg/application/things"
 	"github.com/diwise/messaging-golang/pkg/messaging"
 	"github.com/diwise/senml"
+	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
 )
 
 var SewerFactory = func(id, tenant string) *Sewer {
@@ -20,13 +22,17 @@ var SewerFactory = func(id, tenant string) *Sewer {
 }
 
 type Sewer struct {
-	ID           string        `json:"id"`
-	Type         string        `json:"type"`
-	Level        float64       `json:"level"`
-	Percent      *float64       `json:"percent,omitempty"`
-	DateObserved time.Time     `json:"dateObserved"`
-	Tenant       string        `json:"tenant"`
-	Sewer        *things.Thing `json:"sewer,omitempty"`
+	ID               string        `json:"id"`
+	Type             string        `json:"type"`
+	Level            float64       `json:"level"`
+	LevelObserved    *time.Time    `json:"levelObserved"`
+	Distance         *float64      `json:"distance,omitempty"`
+	DistanceObserved *time.Time    `json:"distanceObserved,omitempty"`
+	Percent          *float64      `json:"percent,omitempty"`
+	PercentObserved  *time.Time    `json:"percentObserved,omitempty"`
+	DateObserved     time.Time     `json:"dateObserved"`
+	Tenant           string        `json:"tenant"`
+	Sewer            *things.Thing `json:"sewer,omitempty"`
 }
 
 func (s Sewer) TopicName() string {
@@ -45,6 +51,8 @@ func (s Sewer) Body() []byte {
 func (s *Sewer) Handle(ctx context.Context, itm messaging.IncomingTopicMessage, tc things.Client) (bool, error) {
 	var err error
 	changed := false
+
+	log := logging.GetFromContext(ctx)
 
 	eq := func(a, b *float64) bool {
 		if a != nil && b != nil {
@@ -81,13 +89,6 @@ func (s *Sewer) Handle(ctx context.Context, itm messaging.IncomingTopicMessage, 
 	if m.Pack != nil {
 		sensorValue, recOk := m.Pack.GetRecord(senml.FindByName("5700"))
 		if recOk {
-			distance, valueOk := sensorValue.GetValue()
-			if valueOk {
-				if !eq(&s.Level, &distance) {
-					s.Level = distance
-					changed = true
-				}
-			}
 
 			ts, timeOk := sensorValue.GetTime()
 			if timeOk {
@@ -96,28 +97,59 @@ func (s *Sewer) Handle(ctx context.Context, itm messaging.IncomingTopicMessage, 
 					changed = true
 				}
 			}
-		}
 
-		if s.DateObserved.IsZero() {
-			s.DateObserved = time.Now().UTC()
-			changed = true
+			distance, valueOk := sensorValue.GetValue()
+			if valueOk {
+				if !eq(s.Distance, &distance) {
+					s.Distance = &distance
+					if timeOk {
+						s.DistanceObserved = &ts
+					} else {
+						now := time.Now().UTC()
+						s.DistanceObserved = &now
+					}
+					changed = true
+				}
+			}
+
+			if urn, ok := m.Pack.GetStringValue(senml.FindByName("0")); ok {
+				log.Debug(fmt.Sprintf("sewer received %s measurement with value %f and changed is %t", urn, distance, changed))
+			}
 		}
 	}
 
 	if m.Level != nil {
 		if !eq(&s.Level, &m.Level.Current) {
 			s.Level = m.Level.Current
+			s.LevelObserved = &m.Timestamp
 			changed = true
 		}
+
 		if m.Level.Percent != nil {
 			if !eq(s.Percent, m.Level.Percent) {
 				s.Percent = m.Level.Percent
+				s.PercentObserved = &m.Timestamp
 				changed = true
 			}
 		}
-		if changed && m.Timestamp.After(s.DateObserved) {
+
+		log.Debug(fmt.Sprintf("sewer received level with value %f and change is %t", m.Level.Current, changed))
+
+		if m.Timestamp.After(s.DateObserved) {
 			s.DateObserved = m.Timestamp
+			changed = true
 		}
+	}
+
+	if s.DateObserved.IsZero() {
+		log.Debug("dateObserved is zero, set to Now()")
+		s.DateObserved = time.Now().UTC()
+		changed = true
+	}
+
+	if !changed {
+		log.Debug("no change in sewer, will force change to true")
+		changed = true
 	}
 
 	return changed, nil
