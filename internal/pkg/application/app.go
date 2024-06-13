@@ -252,6 +252,8 @@ func processIncomingTopicMessage[T CipFunctionHandler](ctx context.Context, app 
 		return false, err
 	}
 
+	log.Debug(fmt.Sprintf("processed incomming message %s, change is %t", itm.ContentType(), change))
+
 	if !change {
 		return false, nil
 	}
