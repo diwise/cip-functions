@@ -11,27 +11,31 @@ import (
 
 	"github.com/diwise/cip-functions/internal/pkg/application/things"
 	"github.com/diwise/messaging-golang/pkg/messaging"
+	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
 	"github.com/google/uuid"
 )
 
 var CombinedSewageOverflowFactory = func(id, tenant string) *CombinedSewageOverflow {
 	return &CombinedSewageOverflow{
-		ID:     id,
-		Type:   "CombinedSewageOverflow",
-		Tenant: tenant,
-		DateObserved: time.Now().UTC(),		
+		ID:           id,
+		Type:         "CombinedSewageOverflow",
+		Tenant:       tenant,
+		DateObserved: time.Now().UTC(),
 	}
 }
 
 type CombinedSewageOverflow struct {
 	ID                     string        `json:"id"`
 	Type                   string        `json:"type"`
-	CumulativeTime         time.Duration `json:"cumulativeTime"`
-	DateObserved           time.Time     `json:"dateObserved"`
-	Overflows              []Overflow    `json:"overflow"`
-	State                  bool          `json:"state"`
-	Tenant                 string        `json:"tenant"`
-	CombinedSewageOverflow *things.Thing `json:"combinedsewageoverflow,omitempty"`
+	CumulativeTime         time.Duration `json:"cumulativeTime"`                   // total time for all overflows
+	DateObserved           time.Time     `json:"dateObserved"`                     // last time
+	Overflows              []Overflow    `json:"overflow"`                         // all detected overflows
+	OverflowDetected       bool          `json:"overflowDetected"`                 // true if last handled message created/updated an overflow
+	OverflowObserved       *time.Time    `json:"overflowObserved,omitempty"`       // time for last overflow observation
+	State                  bool          `json:"state"`                            // current state
+	StateChanged           bool          `json:"stateChanged"`                     // true if last handled message changed state
+	Tenant                 string        `json:"tenant"`                           // tenant
+	CombinedSewageOverflow *things.Thing `json:"combinedsewageoverflow,omitempty"` // related thing
 }
 
 type Overflow struct {
@@ -87,13 +91,11 @@ func getStopwatch(itm messaging.IncomingTopicMessage) (*stopwatch, error) {
 func (cso *CombinedSewageOverflow) Handle(ctx context.Context, itm messaging.IncomingTopicMessage, tc things.Client) (bool, error) {
 	changed := false
 
+	log := logging.GetFromContext(ctx)
+
 	sw, err := getStopwatch(itm)
 	if err != nil {
 		return false, err
-	}
-
-	if sw.StartTime.IsZero() {
-		return false, fmt.Errorf("start time is zero")
 	}
 
 	if cso.CombinedSewageOverflow == nil {
@@ -102,9 +104,17 @@ func (cso *CombinedSewageOverflow) Handle(ctx context.Context, itm messaging.Inc
 		}
 	}
 
+	if sw.StartTime.IsZero() {
+		log.Debug("start time is zero, will update dateObserved")
+		cso.DateObserved = time.Now().UTC()
+		cso.OverflowDetected = false
+		return true, nil
+	}
+
 	i, changed := getIndexForOverflow(cso, sw.StartTime)
 
 	overflow := &cso.Overflows[i]
+	cso.OverflowDetected = true
 
 	if overflow.StopTime != nil {
 		return changed, fmt.Errorf("current overflow already ended")
@@ -121,6 +131,7 @@ func (cso *CombinedSewageOverflow) Handle(ctx context.Context, itm messaging.Inc
 			}
 
 			cso.DateObserved = overflow.StartTime.UTC()
+			cso.OverflowObserved = &overflow.StartTime
 		}
 
 		if !sw.State {
@@ -135,6 +146,7 @@ func (cso *CombinedSewageOverflow) Handle(ctx context.Context, itm messaging.Inc
 			}
 
 			cso.DateObserved = overflow.StopTime.UTC()
+			cso.OverflowObserved = overflow.StopTime
 		}
 
 		overflow.State = sw.State
@@ -158,6 +170,7 @@ func (cso *CombinedSewageOverflow) Handle(ctx context.Context, itm messaging.Inc
 	if cso.State != cso.Overflows[len(cso.Overflows)-1].State {
 		cso.State = cso.Overflows[len(cso.Overflows)-1].State
 		changed = true
+		cso.StateChanged = true
 	}
 
 	return changed, nil
