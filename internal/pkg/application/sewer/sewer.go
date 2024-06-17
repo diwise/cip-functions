@@ -24,6 +24,7 @@ var SewerFactory = func(id, tenant string) *Sewer {
 type Sewer struct {
 	ID               string        `json:"id"`
 	Type             string        `json:"type"`
+	DeviceID         *string       `json:"deviceID,omitempty"`
 	Level            float64       `json:"level"`
 	LevelObserved    *time.Time    `json:"levelObserved"`
 	Distance         *float64      `json:"distance,omitempty"`
@@ -62,10 +63,11 @@ func (s *Sewer) Handle(ctx context.Context, itm messaging.IncomingTopicMessage, 
 	}
 
 	m := struct {
-		ID     string      `json:"id,omitempty"`
-		Tenant *string     `json:"tenant,omitempty"`
-		Pack   *senml.Pack `json:"pack,omitempty"`
-		Level  *struct {
+		ID       string      `json:"id,omitempty"`
+		DeviceID *string     `json:"deviceID,omitempty"`
+		Tenant   *string     `json:"tenant,omitempty"`
+		Pack     *senml.Pack `json:"pack,omitempty"`
+		Level    *struct {
 			Current float64  `json:"current"`
 			Percent *float64 `json:"percent,omitempty"`
 		} `json:"level,omitempty"`
@@ -76,6 +78,8 @@ func (s *Sewer) Handle(ctx context.Context, itm messaging.IncomingTopicMessage, 
 		return changed, err
 	}
 
+	log.Debug(string(itm.Body()))
+
 	if m.Pack == nil && m.Level == nil {
 		return false, nil
 	}
@@ -84,6 +88,11 @@ func (s *Sewer) Handle(ctx context.Context, itm messaging.IncomingTopicMessage, 
 		if t, err := tc.FindByID(ctx, s.ID); err == nil {
 			s.Sewer = &t
 		}
+	}
+
+	// 1:1 device:sewer is a limitation
+	if m.DeviceID != nil && s.DeviceID == nil {
+		s.DeviceID = m.DeviceID
 	}
 
 	if m.Pack != nil {
