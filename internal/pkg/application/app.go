@@ -237,6 +237,7 @@ func processIncomingTopicMessage[T CipFunctionHandler](ctx context.Context, app 
 
 	tenant := "default"
 	if rel.Tenant != "" {
+		log.Debug(fmt.Sprintf("use tenant from related object (%s)", rel.Tenant))
 		tenant = rel.Tenant
 	}
 
