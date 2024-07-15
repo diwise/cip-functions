@@ -239,6 +239,10 @@ func processIncomingTopicMessage[T CipFunctionHandler](ctx context.Context, app 
 	if rel.Tenant != "" {
 		log.Debug(fmt.Sprintf("use tenant from related object (%s)", rel.Tenant))
 		tenant = rel.Tenant
+	} else {
+		log.Debug(fmt.Sprintf("no tenant information on related thing %s (%s)", rel.Id, rel.Tenant))
+		b, _:=json.Marshal(rel)
+		log.Debug(fmt.Sprintf("thing: \"%s\"", string(b)))
 	}
 
 	state, err := storage.GetOrDefault(ctx, app.store, rel.Id, fn(rel.Id, tenant))

@@ -150,6 +150,8 @@ func (tc ClientImpl) findByID(ctx context.Context, thingID string) (*JsonApiResp
 		return nil, err
 	}
 
+	log.Debug(fmt.Sprintf("response body: %s", string(body)))
+
 	jar := JsonApiResponse{}
 	err = json.Unmarshal(body, &jar)
 	if err != nil {
