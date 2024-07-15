@@ -224,7 +224,7 @@ func processIncomingTopicMessage[T CipFunctionHandler](ctx context.Context, app 
 
 	rel, ok, err := getRelatedThing[T](ctx, app, id)
 	if err != nil {
-		log.Error("could not fetch related thing", "err", err.Error())
+		log.Error("could not fetch related thing (1)", "err", err.Error())
 		return false, err
 	}
 
@@ -235,13 +235,19 @@ func processIncomingTopicMessage[T CipFunctionHandler](ctx context.Context, app 
 	log = log.With(slog.String("thing_id", rel.Id))
 	ctx = logging.NewContextWithLogger(ctx, log)
 
+	rel, err = app.thingsClient.FindByID(ctx, rel.Id)
+	if err != nil {
+		log.Error("could not fetch related thing (2)", "err", err.Error())
+		return false, err
+	}
+
 	tenant := "default"
 	if rel.Tenant != "" {
 		log.Debug(fmt.Sprintf("use tenant from related object (%s)", rel.Tenant))
 		tenant = rel.Tenant
 	} else {
 		log.Debug(fmt.Sprintf("no tenant information on related thing %s (%s)", rel.Id, rel.Tenant))
-		b, _:=json.Marshal(rel)
+		b, _ := json.Marshal(rel)
 		log.Debug(fmt.Sprintf("thing: \"%s\"", string(b)))
 	}
 
