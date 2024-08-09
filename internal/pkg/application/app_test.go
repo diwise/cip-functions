@@ -104,6 +104,45 @@ func TestCombinedSewageOverflowIntegrationTest(t *testing.T) {
 	is.NoErr(err)
 }
 
+func newTestMessage(contentType string, body string) testMessage {
+	var b any
+	json.Unmarshal([]byte(body), &b)
+
+	return testMessage{
+		body:        b,
+		contentType: contentType,
+	}
+}
+
+type testMessage struct {
+	contentType string
+	body        any
+}
+
+func (m testMessage) ContentType() string {
+	return m.contentType
+}
+func (m testMessage) Body() []byte {
+	b, _ := json.Marshal(m.body)
+	return b
+}
+func (m testMessage) TopicName() string {
+	return "function.updated"
+}
+
+func TestCombinedSewageOverflow(t *testing.T) {
+	is, msgCtx, tc, s, ctx, ok := setupIntegrationTest(t)
+	if !ok {
+		t.Skip()
+	}
+	app, _ := New(msgCtx, tc, s)
+	for _, m := range function_updated_stopwatch {
+		itm := newTestMessage("application/vnd.diwise.stopwatch.overflow+json", m)
+		_, err := processIncomingTopicMessage(ctx, app, "xyz123", itm, combinedsewageoverflow.CombinedSewageOverflowFactory)
+		is.NoErr(err)
+	}
+}
+
 func setupIntegrationTest(t *testing.T) (*is.I, *messaging.MsgContextMock, *things.ClientMock, storage.Storage, context.Context, bool) {
 	is := is.New(t)
 	ctx := context.Background()
@@ -131,6 +170,7 @@ func setupIntegrationTest(t *testing.T) (*is.I, *messaging.MsgContextMock, *thin
 	}
 
 	msgCtx.PublishOnTopicFunc = func(ctx context.Context, message messaging.TopicMessage) error {
+		fmt.Printf("%s\n", string(message.Body()))
 		return nil
 	}
 
@@ -208,4 +248,12 @@ func setup(t *testing.T, store map[string]any) (*is.I, *messaging.MsgContextMock
 	}
 
 	return is, msgCtx, tc, s, context.Background(), log
+}
+
+var function_updated_stopwatch = [5]string{
+	`{"id":"xyz123","name":"Förrådet BPN","type":"stopwatch","subtype":"overflow","deviceID":"abc123","tenant":"default","onupdate":true,"timestamp":"2024-08-08T11:21:25.213602292Z","stopwatch":{"startTime":"0001-01-01T00:00:00Z","state":false,"count":0,"cumulativeTime":0}}`,
+	`{"id":"xyz123","name":"Förrådet BPN","type":"stopwatch","subtype":"overflow","deviceID":"abc123","tenant":"default","onupdate":true,"timestamp":"2024-08-08T11:21:25.213721769Z","stopwatch":{"startTime":"0001-01-01T00:00:00Z","state":false,"count":0,"cumulativeTime":0}}`,
+	`{"id":"xyz123","name":"Förrådet BPN","type":"stopwatch","subtype":"overflow","deviceID":"abc123","tenant":"default","onupdate":true,"timestamp":"2024-08-08T11:21:25.213721769Z","stopwatch":{"startTime":"2024-08-08T09:21:25Z","state":true,"count":1,"cumulativeTime":0}}`,
+	`{"id":"xyz123","name":"Förrådet BPN","type":"stopwatch","subtype":"overflow","deviceID":"abc123","tenant":"default","onupdate":true,"timestamp":"2024-08-08T11:21:25.213721769Z","stopwatch":{"startTime":"2024-08-08T09:21:25Z","duration":3600000000000,"state":true,"count":2,"cumulativeTime":0}}`,
+	`{"id":"xyz123","name":"Förrådet BPN","type":"stopwatch","subtype":"overflow","deviceID":"abc123","tenant":"default","onupdate":true,"timestamp":"2024-08-08T11:21:25.213721769Z","stopwatch":{"startTime":"2024-08-08T09:21:25Z","stopTime":"2024-08-08T11:21:25Z","duration":7200000000000,"state":false,"count":3,"cumulativeTime":7200000000000}}`,
 }
