@@ -21,6 +21,7 @@ var CombinedSewageOverflowFactory = func(id, tenant string) *CombinedSewageOverf
 		Type:         "CombinedSewageOverflow",
 		Tenant:       tenant,
 		DateObserved: time.Now().UTC(),
+		CumulativeTime: 0,
 	}
 }
 

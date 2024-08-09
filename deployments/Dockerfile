@@ -19,7 +19,7 @@ RUN GOOS=$TARGETOS GOARCH=$TARGETARCH go build
 FROM registry.access.redhat.com/ubi9/ubi-minimal
 WORKDIR /opt/diwise
 
-LABEL org.opencontainers.image.source = "https://github.com/diwise/cip-functions"
+LABEL org.opencontainers.image.source="https://github.com/diwise/cip-functions"
 
 COPY --from=builder --chown=1001 /app/cmd/cip-functions/cip-functions /opt/diwise
 
