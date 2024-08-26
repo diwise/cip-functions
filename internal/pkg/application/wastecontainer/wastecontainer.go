@@ -90,7 +90,7 @@ func (wc *WasteContainer) Handle(ctx context.Context, itm messaging.IncomingTopi
 	}
 
 	if wc.WasteContainer == nil {
-		if t, err := tc.FindByID(ctx, wc.ID); err == nil {
+		if t, err := tc.FindByID(ctx, wc.ID, "WasteContainer"); err == nil {
 			wc.WasteContainer = &t
 		}
 	}

@@ -100,7 +100,7 @@ func TestCombinedSewageOverflowIntegrationTest(t *testing.T) {
 		},
 	}
 
-	_, err := processIncomingTopicMessage(ctx, app, "25e185f6-bdba-4c68-b6e8-23ae2bb10254", itm, combinedsewageoverflow.CombinedSewageOverflowFactory)
+	_, err := processIncomingTopicMessage(ctx, app, "25e185f6-bdba-4c68-b6e8-23ae2bb10254", "Stopwatch", itm, combinedsewageoverflow.CombinedSewageOverflowFactory)
 	is.NoErr(err)
 }
 
@@ -138,7 +138,7 @@ func TestCombinedSewageOverflow(t *testing.T) {
 	app, _ := New(msgCtx, tc, s)
 	for _, m := range function_updated_stopwatch {
 		itm := newTestMessage("application/vnd.diwise.stopwatch.overflow+json", m)
-		_, err := processIncomingTopicMessage(ctx, app, "xyz123", itm, combinedsewageoverflow.CombinedSewageOverflowFactory)
+		_, err := processIncomingTopicMessage(ctx, app, "xyz123", "stopwatch", itm, combinedsewageoverflow.CombinedSewageOverflowFactory)
 		is.NoErr(err)
 	}
 }
@@ -149,21 +149,21 @@ func setupIntegrationTest(t *testing.T) (*is.I, *messaging.MsgContextMock, *thin
 	msgCtx := &messaging.MsgContextMock{}
 	tc := &things.ClientMock{}
 
-	tc.FindRelatedThingsFunc = func(ctx context.Context, thingID string) ([]things.Thing, error) {
+	tc.FindRelatedThingsFunc = func(ctx context.Context, id, thingType string) ([]things.Thing, error) {
 		tenant := "tenant"
 		return []things.Thing{
 			{
-				Id:     "72fb1b1c-d574-4946-befe-0ad1ba57bcf4",
+				ID:     "72fb1b1c-d574-4946-befe-0ad1ba57bcf4",
 				Type:   "CombinedSewageOverflow",
 				Tenant: tenant,
 			},
 		}, nil
 	}
 
-	tc.FindByIDFunc = func(ctx context.Context, thingID string) (things.Thing, error) {
+	tc.FindByIDFunc = func(ctx context.Context, id, thingType string) (things.Thing, error) {
 		tenant := "tenant"
 		return things.Thing{
-			Id:     "72fb1b1c-d574-4946-befe-0ad1ba57bcf4",
+			ID:     "72fb1b1c-d574-4946-befe-0ad1ba57bcf4",
 			Type:   "CombinedSewageOverflow",
 			Tenant: tenant,
 		}, nil
@@ -219,21 +219,21 @@ func setup(t *testing.T, store map[string]any) (*is.I, *messaging.MsgContextMock
 		return nil
 	}
 
-	tc.FindRelatedThingsFunc = func(ctx context.Context, thingID string) ([]things.Thing, error) {
+	tc.FindRelatedThingsFunc = func(ctx context.Context, id, thingType string) ([]things.Thing, error) {
 		tenant := "tenant"
 		return []things.Thing{
 			{
-				Id:     "72fb1b1c-d574-4946-befe-0ad1ba57bcf4",
+				ID:     "72fb1b1c-d574-4946-befe-0ad1ba57bcf4",
 				Type:   "WasteContainer",
 				Tenant: tenant,
 			},
 		}, nil
 	}
 
-	tc.FindByIDFunc = func(ctx context.Context, thingID string) (things.Thing, error) {
+	tc.FindByIDFunc = func(ctx context.Context, id, thingType string) (things.Thing, error) {
 		tenant := "tenant"
 		return things.Thing{
-			Id:     "72fb1b1c-d574-4946-befe-0ad1ba57bcf4",
+			ID:     "72fb1b1c-d574-4946-befe-0ad1ba57bcf4",
 			Type:   "WasteContainer",
 			Tenant: tenant,
 		}, nil

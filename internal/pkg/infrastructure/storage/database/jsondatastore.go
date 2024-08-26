@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/diwise/service-chassis/pkg/infrastructure/env"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -78,7 +79,11 @@ func (jds *JsonDataStore) Create(ctx context.Context, id, typeName string, value
 		return err
 	}
 
-	_, err = jds.db.Exec(ctx, `insert into cip_fnct (id, type, data) values ($1, $2, $3)`, id, typeName, string(b))
+	id = strings.ToLower(id)
+	typeName = strings.ToLower(typeName)
+	cipID := fmt.Sprintf("urn:diwise:%s:%s", strings.ToLower(typeName), strings.ToLower(id))
+
+	_, err = jds.db.Exec(ctx, `insert into cip_fnct (cip_id, id, type, data) values ($1, $2, $3, $4)`, cipID, id, typeName, string(b))
 	if err != nil {
 		return err
 	}
@@ -92,7 +97,10 @@ func (jds *JsonDataStore) Update(ctx context.Context, id, typeName string, value
 		return err
 	}
 
-	_, err = jds.db.Exec(ctx, `update cip_fnct set data = $3 where id = $1 and type = $2`, id, typeName, string(b))
+	id = strings.ToLower(id)
+	typeName = strings.ToLower(typeName)
+
+	_, err = jds.db.Exec(ctx, `update cip_fnct set data = $3, updated_on=CURRENT_TIMESTAMP where id = $1 and type = $2`, id, typeName, string(b))
 	if err != nil {
 		return err
 	}
@@ -102,6 +110,9 @@ func (jds *JsonDataStore) Update(ctx context.Context, id, typeName string, value
 
 func (jds *JsonDataStore) Read(ctx context.Context, id, typeName string) (any, error) {
 	var obj any
+
+	id = strings.ToLower(id)
+	typeName = strings.ToLower(typeName)
 
 	err := jds.db.QueryRow(ctx, `select data from cip_fnct where id=$1 and type=$2`, id, typeName).Scan(&obj)
 	if err != nil {
@@ -113,6 +124,10 @@ func (jds *JsonDataStore) Read(ctx context.Context, id, typeName string) (any, e
 
 func (jds *JsonDataStore) Exists(ctx context.Context, id, typeName string) bool {
 	var n int32
+
+	id = strings.ToLower(id)
+	typeName = strings.ToLower(typeName)
+
 	err := jds.db.QueryRow(ctx, `select count(*) from cip_fnct where id = $1 and type=$2`, id, typeName).Scan(&n)
 	if err != nil {
 		return false
@@ -124,11 +139,17 @@ func (jds *JsonDataStore) Exists(ctx context.Context, id, typeName string) bool 
 func (jds *JsonDataStore) createTables(ctx context.Context) error {
 	ddl := `
 		CREATE TABLE IF NOT EXISTS cip_fnct (
+			cip_id  TEXT NOT NULL,
 			id 		TEXT NOT NULL,
 			type    TEXT NOT NULL,
 			data    JSONB NOT NULL,
 			PRIMARY KEY(id, type)
-	  	);`
+	  	);
+		
+		ALTER TABLE cip_fnct ADD COLUMN IF NOT EXISTS cip_id TEXT NOT NULL DEFAULT ''; 
+		ALTER TABLE cip_fnct ADD COLUMN IF NOT EXISTS created_on timestamp with time zone NULL DEFAULT CURRENT_TIMESTAMP;
+		ALTER TABLE cip_fnct ADD COLUMN IF NOT EXISTS updated_on timestamp with time zone NULL;
+		`
 
 	tx, err := jds.db.Begin(ctx)
 	if err != nil {

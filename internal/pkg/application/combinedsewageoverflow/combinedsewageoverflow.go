@@ -100,7 +100,7 @@ func (cso *CombinedSewageOverflow) Handle(ctx context.Context, itm messaging.Inc
 	}
 
 	if cso.CombinedSewageOverflow == nil {
-		if t, err := tc.FindByID(ctx, cso.ID); err == nil {
+		if t, err := tc.FindByID(ctx, cso.ID, "CombinedSewageOverflow"); err == nil {
 			cso.CombinedSewageOverflow = &t
 		}
 	}

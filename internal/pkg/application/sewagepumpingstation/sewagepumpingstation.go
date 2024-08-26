@@ -71,7 +71,7 @@ func (sp *SewagePumpingStation) Handle(ctx context.Context, itm messaging.Incomi
 	}
 
 	if sp.SewagePumpingStation == nil {
-		if t, err := tc.FindByID(ctx, sp.ID); err == nil {
+		if t, err := tc.FindByID(ctx, sp.ID, "SewagePumpingStation"); err == nil {
 			sp.SewagePumpingStation = &t
 		}
 	}

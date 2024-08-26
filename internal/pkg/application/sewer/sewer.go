@@ -85,7 +85,7 @@ func (s *Sewer) Handle(ctx context.Context, itm messaging.IncomingTopicMessage, 
 	}
 
 	if s.Sewer == nil {
-		if t, err := tc.FindByID(ctx, s.ID); err == nil {
+		if t, err := tc.FindByID(ctx, s.ID, "Sewer"); err == nil {
 			s.Sewer = &t
 		}
 	}
