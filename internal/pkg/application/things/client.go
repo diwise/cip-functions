@@ -29,8 +29,8 @@ type ClientImpl struct {
 
 //go:generate moq -rm -out client_mock.go . Client
 type Client interface {
-	FindByID(ctx context.Context, thingID string) (Thing, error)
-	FindRelatedThings(ctx context.Context, thingID string) ([]Thing, error)
+	FindByID(ctx context.Context, id, thingType string) (Thing, error)
+	FindRelatedThings(ctx context.Context, id, thingType string) ([]Thing, error)
 }
 
 func NewClient(ctx context.Context, url, oauthTokenURL, oauthClientID, oauthClientSecret string) (*ClientImpl, error) {
@@ -62,8 +62,8 @@ func NewClient(ctx context.Context, url, oauthTokenURL, oauthClientID, oauthClie
 	}, nil
 }
 
-func (tc ClientImpl) FindByID(ctx context.Context, thingID string) (Thing, error) {
-	jar, err := tc.findByID(ctx, thingID)
+func (tc ClientImpl) FindByID(ctx context.Context, id, thingType string) (Thing, error) {
+	jar, err := tc.findByID(ctx, id, thingType)
 	if err != nil {
 		return Thing{}, err
 	}
@@ -78,22 +78,22 @@ func (tc ClientImpl) FindByID(ctx context.Context, thingID string) (Thing, error
 	return t, nil
 }
 
-func (tc ClientImpl) FindRelatedThings(ctx context.Context, thingID string) ([]Thing, error) {
-	jar, err := tc.findByID(ctx, thingID)
+func (tc ClientImpl) FindRelatedThings(ctx context.Context, id, thingType string) ([]Thing, error) {
+	jar, err := tc.findByID(ctx, id, thingType)
 	if err != nil {
 		return nil, err
 	}
 	return jar.Included, nil
 }
 
-func (tc ClientImpl) findByID(ctx context.Context, thingID string) (*JsonApiResponse, error) {
+func (tc ClientImpl) findByID(ctx context.Context, id, thingType string) (*JsonApiResponse, error) {
 	var err error
 	ctx, span := tracer.Start(ctx, "find-thing-by-id")
 	defer func() { tracing.RecordAnyErrorAndEndSpan(err, span) }()
 
 	log := logging.GetFromContext(ctx)
 
-	url := fmt.Sprintf("%s/%s/%s", tc.url, "api/v0/things", thingID)
+	url := fmt.Sprintf("%s/%s/urn:diwise:%s:%s", tc.url, "api/v0/things", strings.ToLower(thingType), strings.ToLower(id))
 
 	cachedItem, found := tc.cache.Get(url)
 	if found {
@@ -170,10 +170,11 @@ type JsonApiResponse struct {
 }
 
 type Thing struct {
-	Id         string          `json:"id"`
+	ThingID    string          `json:"thing_id"`
+	ID         string          `json:"id"`
 	Type       string          `json:"type"`
 	Location   Location        `json:"location"`
-	Tenant     string          `json:"tenant,omitempty"`
+	Tenant     string          `json:"tenant"`
 	Properties *map[string]any `json:"properties,omitempty"`
 }
 
@@ -189,8 +190,13 @@ func (t *Thing) UnmarshalJSON(data []byte) error {
 		return nil
 	}
 
+	if thingID, ok := props["thing_id"];ok {
+		t.ThingID = thingID.(string)
+		delete(props,"thing_id")
+	}
+
 	if id, ok := props["id"]; ok {
-		t.Id = id.(string)
+		t.ID = id.(string)
 		delete(props, "id")
 	}
 

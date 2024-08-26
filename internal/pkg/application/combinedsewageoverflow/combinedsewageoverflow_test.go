@@ -25,9 +25,9 @@ func TestStartStop(t *testing.T) {
 	is := is.New(t)
 	ctx := context.Background()
 	tc := &things.ClientMock{
-		FindByIDFunc: func(ctx context.Context, thingID string) (things.Thing, error) {
+		FindByIDFunc: func(ctx context.Context, id, thingType string) (things.Thing, error) {
 			return things.Thing{
-				Id:   "cso:1",
+				ID:   "cso:1",
 				Type: "CombinedSewageOverflow",
 			}, nil
 		},
@@ -68,9 +68,9 @@ func TestMultipleStopwatches(t *testing.T) {
 	is := is.New(t)
 	ctx := context.Background()
 	tc := &things.ClientMock{
-		FindByIDFunc: func(ctx context.Context, thingID string) (things.Thing, error) {
+		FindByIDFunc: func(ctx context.Context, id, thingType string) (things.Thing, error) {
 			return things.Thing{
-				Id:   "cso:1",
+				ID:   "cso:1",
 				Type: "CombinedSewageOverflow",
 			}, nil
 		},

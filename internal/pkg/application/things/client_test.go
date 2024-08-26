@@ -18,7 +18,7 @@ func TestUnmarshalToThing(t *testing.T) {
 
 	data, _ := json.Marshal(thingWithProps{
 		Thing: Thing{
-			Id:   "id",
+			ID:   "id",
 			Type: "type",
 			Location: Location{
 				Latitude:  62,
