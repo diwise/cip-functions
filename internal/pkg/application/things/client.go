@@ -170,12 +170,12 @@ type JsonApiResponse struct {
 }
 
 type Thing struct {
-	ThingID    string          `json:"thing_id"`
-	ID         string          `json:"id"`
-	Type       string          `json:"type"`
-	Location   Location        `json:"location"`
-	Tenant     string          `json:"tenant"`
-	Properties *map[string]any `json:"properties,omitempty"`
+	ThingID    string         `json:"thing_id"`
+	ID         string         `json:"id"`
+	Type       string         `json:"type"`
+	Location   Location       `json:"location"`
+	Tenant     string         `json:"tenant"`
+	Properties map[string]any `json:"properties,omitempty"`
 }
 
 type Location struct {
@@ -190,9 +190,9 @@ func (t *Thing) UnmarshalJSON(data []byte) error {
 		return nil
 	}
 
-	if thingID, ok := props["thing_id"];ok {
+	if thingID, ok := props["thing_id"]; ok {
 		t.ThingID = thingID.(string)
-		delete(props,"thing_id")
+		delete(props, "thing_id")
 	}
 
 	if id, ok := props["id"]; ok {
@@ -225,7 +225,20 @@ func (t *Thing) UnmarshalJSON(data []byte) error {
 	}
 
 	if len(props) > 0 {
-		t.Properties = &props
+		if len(t.Properties) == 0 {
+			t.Properties = make(map[string]any)
+		}
+		for k, v := range props {
+			if k == "properties" {
+				if properties, ok := v.(map[string]any); ok {
+					for pk, pv := range properties {
+						t.Properties[pk] = pv
+					}
+				}
+			} else {
+				t.Properties[k] = v
+			}
+		}
 	}
 
 	return nil
