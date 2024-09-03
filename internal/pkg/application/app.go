@@ -226,7 +226,7 @@ func processIncomingTopicMessage[T CipFunctionHandler](ctx context.Context, app 
 	log = log.With(slog.String("thing_type", thingType))
 	ctx = logging.NewContextWithLogger(ctx, log)
 
-	theThing, err := app.getRelated(ctx, id, type_, thingType) // type is a function or a device, ex: stopwatch for CombinedSewerOwerflow (thingType)
+	theThing, err := app.getRelatedThings(ctx, id, type_, thingType) // type is a function or a device, ex: stopwatch for CombinedSewerOwerflow (thingType)
 	if err != nil {
 		log.Error("could not find thing to process, no such related thing found on function/device", "err", err.Error())
 		return false, err
@@ -235,7 +235,7 @@ func processIncomingTopicMessage[T CipFunctionHandler](ctx context.Context, app 
 	log = log.With(slog.String("thing_id", theThing.ID))
 	ctx = logging.NewContextWithLogger(ctx, log)
 
-	theThing, err = app.thingsClient.FindByID(ctx, theThing.ID, theThing.Type)
+	theThing, err = app.findByID(ctx, theThing.ID, theThing.Type)
 	if err != nil {
 		log.Error("could not fetch thing", "err", err.Error())
 		return false, err
@@ -288,11 +288,31 @@ func processIncomingTopicMessage[T CipFunctionHandler](ctx context.Context, app 
 
 var ErrNoRelatedThingFound = fmt.Errorf("no related thing found")
 
+func (a App) findByID(ctx context.Context, id, thingType string) (things.Thing, error) {
+	log := logging.GetFromContext(ctx)
+
+	log.Debug("find thing by id", slog.String("id", id), slog.String("type", thingType))
+
+	t, err := a.thingsClient.FindByID(ctx, id, thingType)
+	if err != nil {
+		if errors.Is(err, things.ErrThingNotFound) {
+			return things.Thing{}, ErrNoRelatedThingFound
+		}
+
+		log.Error(fmt.Sprintf("failed to get thing by id - %s", err.Error()))
+		return things.Thing{}, err
+	}
+
+	return t, nil
+}
+
 // id - function/device id 
 // typeName - function type (stopwatch, level ...) or "Device"
 // relatedType - type of related thing, i.e. CombinedSewerOverflow, Sewer, WasteContainer ...
-func (a App) getRelated(ctx context.Context, id, typeName, relatedType string) (things.Thing, error) {
+func (a App) getRelatedThings(ctx context.Context, id, typeName, relatedType string) (things.Thing, error) {
 	log := logging.GetFromContext(ctx)
+
+	log.Debug("get related thing", slog.String("id", id), slog.String("type", typeName), slog.String("related_type", relatedType))
 
 	// fetch "function"/device and returns .Included
 	ts, err := a.thingsClient.FindRelatedThings(ctx, id, typeName)
